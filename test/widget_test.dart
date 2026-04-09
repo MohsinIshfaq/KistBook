@@ -1,30 +1,21 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:kistbook/main.dart';
+import 'package:kistbook/core/utils/date_helper.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('Friday due dates shift to Saturday', () {
+    final friday = DateTime(2026, 4, 10);
+    final shifted = DateHelper.shiftFridayToSaturday(friday);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(shifted.weekday, DateTime.saturday);
+    expect(shifted.day, 11);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('Missed installments carry forward without changing the rest of schedule', () {
+    final reconciled = DateHelper.reconcileMissedDueDate(
+      currentDueDate: DateTime(2026, 4, 8),
+      today: DateTime(2026, 4, 12),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(reconciled, DateTime(2026, 4, 12));
   });
 }
