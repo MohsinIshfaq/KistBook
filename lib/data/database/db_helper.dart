@@ -73,6 +73,54 @@ class DbHelper {
             )
           ''');
         }
+        if (oldVersion < 4) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.plans} ADD COLUMN product_ids_text TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute('''
+            UPDATE ${DbConstants.plans}
+            SET product_ids_text = CASE
+              WHEN product_id IS NULL THEN ''
+              ELSE CAST(product_id AS TEXT)
+            END
+          ''');
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.plans} ADD COLUMN product_selections_text TEXT NOT NULL DEFAULT '[]'",
+          );
+          await db.execute('''
+            UPDATE ${DbConstants.plans}
+            SET product_selections_text = CASE
+              WHEN product_id IS NULL THEN '[]'
+              ELSE '[{"product_id":' || product_id || ',"quantity":1}]'
+            END
+            WHERE product_ids_text = ''
+          ''');
+          await db.execute('''
+            UPDATE ${DbConstants.plans}
+            SET product_selections_text =
+              '[{"product_id":' ||
+              REPLACE(product_ids_text, ',', ',"quantity":1},{"product_id":') ||
+              ',"quantity":1}]'
+            WHERE product_ids_text != ''
+          ''');
+        }
+        if (oldVersion < 6) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.plans} ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1",
+          );
+          await db.execute(
+            "ALTER TABLE ${DbConstants.plans} ADD COLUMN unit_price REAL NOT NULL DEFAULT 0",
+          );
+          await db.execute('''
+            UPDATE ${DbConstants.plans}
+            SET unit_price = CASE
+              WHEN quantity > 0 THEN total_amount / quantity
+              ELSE total_amount
+            END
+          ''');
+        }
       },
     );
 

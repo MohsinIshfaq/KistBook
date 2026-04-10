@@ -66,7 +66,7 @@ class DashboardRepository {
         customer: customer,
         plan: plan,
         installment: installment,
-        product: plan.productId == null ? null : productById[plan.productId!],
+        product: plan.primaryProductId == null ? null : productById[plan.primaryProductId!],
       );
       if (DateHelper.startOfDay(installment.currentDueDate) == effectiveToday) {
         dueToday.add(detail);

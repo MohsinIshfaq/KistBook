@@ -5,8 +5,8 @@ import 'package:get/get.dart';
 import '../../core/utils/date_helper.dart';
 import '../../data/models/customer_model.dart';
 import '../../data/models/dashboard_models.dart';
-import '../../data/models/product_model.dart';
 import '../../data/models/purchase_plan_model.dart';
+import '../../data/models/product_model.dart';
 import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/product_repository.dart';
@@ -47,35 +47,62 @@ class InstallmentController extends GetxController {
 
   Future<void> createPlan({
     required int customerId,
-    required ProductModel? product,
-    required String itemName,
-    required double totalAmount,
-    required double depositAmount,
-    required double installmentAmount,
-    required int frequencyDays,
-    required DateTime startDate,
+    required List<CreatePlanProductInput> products,
     required String notes,
   }) async {
-    final financedAmount = max(0.0, totalAmount - depositAmount);
-    final installmentCount = financedAmount <= 0
-        ? 0
-        : max(1, (financedAmount / installmentAmount).ceil());
+    for (final productInput in products) {
+      final financedAmount = max(0.0, productInput.totalAmount - productInput.depositAmount);
+      final installmentCount = financedAmount <= 0
+          ? 0
+          : max(1, (financedAmount / productInput.installmentAmount).ceil());
 
-    await _installmentRepository.createPlan(
-      PurchasePlanModel(
-        customerId: customerId,
-        productId: product?.id,
-        itemName: itemName,
-        totalAmount: totalAmount,
-        depositAmount: depositAmount,
-        installmentAmount: installmentAmount,
-        installmentCount: installmentCount,
-        frequencyDays: frequencyDays,
-        startDate: DateHelper.shiftFridayToSaturday(startDate),
-        notes: notes,
-        createdAt: DateTime.now(),
-      ),
-    );
+      await _installmentRepository.createPlan(
+        PurchasePlanModel(
+          customerId: customerId,
+          productId: productInput.product.id,
+          quantity: productInput.quantity,
+          unitPrice: productInput.product.salePrice,
+          productIds: [productInput.product.id!],
+          productSelections: [
+            PlanProductSelection(
+              productId: productInput.product.id!,
+              quantity: productInput.quantity,
+            ),
+          ],
+          itemName: productInput.itemName,
+          totalAmount: productInput.totalAmount,
+          depositAmount: productInput.depositAmount,
+          installmentAmount: productInput.installmentAmount,
+          installmentCount: installmentCount,
+          frequencyDays: productInput.frequencyDays,
+          startDate: DateHelper.shiftFridayToSaturday(productInput.startDate),
+          notes: notes,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
     await loadData();
   }
+}
+
+class CreatePlanProductInput {
+  const CreatePlanProductInput({
+    required this.product,
+    required this.quantity,
+    required this.itemName,
+    required this.totalAmount,
+    required this.depositAmount,
+    required this.installmentAmount,
+    required this.frequencyDays,
+    required this.startDate,
+  });
+
+  final ProductModel product;
+  final int quantity;
+  final String itemName;
+  final double totalAmount;
+  final double depositAmount;
+  final double installmentAmount;
+  final int frequencyDays;
+  final DateTime startDate;
 }

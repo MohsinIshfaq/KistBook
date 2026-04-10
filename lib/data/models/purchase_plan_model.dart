@@ -1,4 +1,27 @@
+import 'dart:convert';
+
 import 'base_model.dart';
+
+class PlanProductSelection {
+  const PlanProductSelection({
+    required this.productId,
+    required this.quantity,
+  });
+
+  final int productId;
+  final int quantity;
+
+  Map<String, Object?> toMap() => {
+        'product_id': productId,
+        'quantity': quantity,
+      };
+
+  factory PlanProductSelection.fromMap(Map<String, Object?> map) =>
+      PlanProductSelection(
+        productId: map['product_id'] as int,
+        quantity: ((map['quantity'] as num?) ?? 1).toInt().clamp(1, 999999),
+      );
+}
 
 class PurchasePlanModel implements BaseModel {
   static String get createTableQuery => '''
@@ -6,6 +29,10 @@ class PurchasePlanModel implements BaseModel {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_id INTEGER NOT NULL,
       product_id INTEGER,
+      quantity INTEGER NOT NULL,
+      unit_price REAL NOT NULL,
+      product_ids_text TEXT NOT NULL,
+      product_selections_text TEXT NOT NULL,
       item_name TEXT NOT NULL,
       total_amount REAL NOT NULL,
       deposit_amount REAL NOT NULL,
@@ -22,6 +49,10 @@ class PurchasePlanModel implements BaseModel {
     this.id,
     required this.customerId,
     this.productId,
+    required this.quantity,
+    required this.unitPrice,
+    required this.productIds,
+    required this.productSelections,
     required this.itemName,
     required this.totalAmount,
     required this.depositAmount,
@@ -37,6 +68,10 @@ class PurchasePlanModel implements BaseModel {
   final int? id;
   final int customerId;
   final int? productId;
+  final int quantity;
+  final double unitPrice;
+  final List<int> productIds;
+  final List<PlanProductSelection> productSelections;
   final String itemName;
   final double totalAmount;
   final double depositAmount;
@@ -47,11 +82,19 @@ class PurchasePlanModel implements BaseModel {
   final String notes;
   final DateTime createdAt;
 
+  int? get primaryProductId =>
+      productId ?? (productIds.isEmpty ? null : productIds.first);
+
   @override
   Map<String, Object?> toMap() => {
         'id': id,
         'customer_id': customerId,
         'product_id': productId,
+        'quantity': quantity,
+        'unit_price': unitPrice,
+        'product_ids_text': productIds.join(','),
+        'product_selections_text':
+            jsonEncode(productSelections.map((item) => item.toMap()).toList()),
         'item_name': itemName,
         'total_amount': totalAmount,
         'deposit_amount': depositAmount,
@@ -73,6 +116,17 @@ class PurchasePlanModel implements BaseModel {
         id: map['id'] as int?,
         customerId: map['customer_id'] as int,
         productId: map['product_id'] as int?,
+        quantity: ((map['quantity'] as num?) ?? 1).toInt(),
+        unitPrice: ((map['unit_price'] as num?) ?? (map['total_amount'] as num)).toDouble(),
+        productIds: _parseProductIds(
+          map['product_ids_text'] as String?,
+          fallbackProductId: map['product_id'] as int?,
+        ),
+        productSelections: _parseProductSelections(
+          map['product_selections_text'] as String?,
+          rawProductIds: map['product_ids_text'] as String?,
+          fallbackProductId: map['product_id'] as int?,
+        ),
         itemName: map['item_name'] as String? ?? '',
         totalAmount: (map['total_amount'] as num).toDouble(),
         depositAmount: (map['deposit_amount'] as num).toDouble(),
@@ -83,4 +137,47 @@ class PurchasePlanModel implements BaseModel {
         notes: map['notes'] as String? ?? '',
         createdAt: DateTime.parse(map['created_at'] as String),
       );
+
+  static List<int> _parseProductIds(String? raw, {int? fallbackProductId}) {
+    final values = (raw ?? '')
+        .split(',')
+        .map((value) => int.tryParse(value.trim()))
+        .whereType<int>()
+        .toList();
+    if (values.isNotEmpty) {
+      return values;
+    }
+    return fallbackProductId == null ? const [] : [fallbackProductId];
+  }
+
+  static List<PlanProductSelection> _parseProductSelections(
+    String? raw, {
+    String? rawProductIds,
+    int? fallbackProductId,
+  }) {
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map(
+                (item) => PlanProductSelection.fromMap(
+                  item.map(
+                    (key, value) => MapEntry(key.toString(), value),
+                  ),
+                ),
+              )
+              .toList();
+        }
+      } catch (_) {
+        // Fall through to legacy parsing.
+      }
+    }
+
+    return _parseProductIds(
+      rawProductIds,
+      fallbackProductId: fallbackProductId,
+    ).map((productId) => PlanProductSelection(productId: productId, quantity: 1)).toList();
+  }
 }

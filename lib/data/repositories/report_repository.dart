@@ -56,7 +56,7 @@ class ReportRepository {
           customer: customer,
           plan: plan,
           installment: installment,
-          product: plan.productId == null ? null : products[plan.productId!],
+          product: plan.primaryProductId == null ? null : products[plan.primaryProductId!],
         ),
       );
     }
