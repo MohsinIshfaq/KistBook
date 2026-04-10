@@ -264,10 +264,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(color: dividerColor, height: 20),
-                ),
+                Divider(color: dividerColor, height: 20),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
                   child: TextField(
@@ -290,10 +287,10 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(color: dividerColor, height: 20),
-                ),
+                // Padding(
+                //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                //   child: Divider(color: dividerColor, height: 20),
+                // ),
                 const SizedBox(height: 12),
                 Expanded(
                   child: Padding(
@@ -355,10 +352,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                           ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(color: dividerColor, height: 20),
-                ),
+                Divider(color: dividerColor, height: 20),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Column(
