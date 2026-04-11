@@ -4,6 +4,7 @@ import '../../modules/customers/customer_detail_view.dart';
 import '../../modules/customers/customer_form_view.dart';
 import '../../modules/customers/customer_list_view.dart';
 import '../../modules/dashboard/dashboard_view.dart';
+import '../../modules/installments/daily_installment_collection_view.dart';
 import '../../modules/installments/installment_schedule_view.dart';
 import '../../modules/payments/payment_form_view.dart';
 import '../../modules/payments/payment_history_view.dart';
@@ -59,6 +60,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.installments,
       page: () => const InstallmentScheduleView(),
+      binding: InstallmentBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.dailyInstallments,
+      page: () => const DailyInstallmentCollectionView(),
       binding: InstallmentBinding(),
     ),
     GetPage(

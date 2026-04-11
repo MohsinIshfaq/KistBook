@@ -229,4 +229,60 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
       }
     });
   }
+
+  Future<void> rescheduleNextInstallment({
+    required int planId,
+    required DateTime targetDate,
+  }) async {
+    final db = await super.db;
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        DbConstants.installments,
+        where: 'plan_id = ? AND paid_amount < amount',
+        whereArgs: [planId],
+        orderBy: 'sequence_number ASC',
+        limit: 1,
+      );
+
+      if (rows.isEmpty) {
+        return;
+      }
+
+      final installment = InstallmentModel.fromMap(rows.first);
+      final shiftedDate = DateHelper.shiftFridayToSaturday(
+        DateHelper.startOfDay(targetDate),
+      );
+
+      await txn.update(
+        DbConstants.installments,
+        {
+          'scheduled_due_date': shiftedDate.toIso8601String(),
+          'current_due_date': shiftedDate.toIso8601String(),
+          'status': InstallmentRecordStatus.pending.name,
+        },
+        where: 'id = ?',
+        whereArgs: [installment.id],
+      );
+    });
+  }
+
+  Future<void> rescheduleInstallment({
+    required int installmentId,
+    required DateTime targetDate,
+  }) async {
+    final db = await super.db;
+    final shiftedDate = DateHelper.shiftFridayToSaturday(
+      DateHelper.startOfDay(targetDate),
+    );
+    await db.update(
+      DbConstants.installments,
+      {
+        'scheduled_due_date': shiftedDate.toIso8601String(),
+        'current_due_date': shiftedDate.toIso8601String(),
+        'status': InstallmentRecordStatus.pending.name,
+      },
+      where: 'id = ?',
+      whereArgs: [installmentId],
+    );
+  }
 }

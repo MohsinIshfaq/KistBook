@@ -7,6 +7,7 @@ abstract class AppRoutes {
   static const productForm = '/products/form';
   static const productDetail = '/products/detail';
   static const installments = '/installments';
+  static const dailyInstallments = '/installments/daily';
   static const payments = '/payments';
   static const paymentForm = '/payments/form';
   static const reports = '/reports';

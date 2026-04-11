@@ -149,6 +149,12 @@ class AppShell extends StatelessWidget {
               currentRoute: currentRoute,
             ),
             _NavTile(
+              label: 'Daily Collection',
+              route: AppRoutes.dailyInstallments,
+              icon: Icons.today_outlined,
+              currentRoute: currentRoute,
+            ),
+            _NavTile(
               label: 'Payments',
               route: AppRoutes.payments,
               icon: Icons.payments_outlined,
