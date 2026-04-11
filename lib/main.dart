@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/routes/app_pages.dart';
@@ -27,6 +28,29 @@ class KistBookApp extends StatelessWidget {
       title: AppStrings.appName,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      builder: (context, child) {
+        final brightness = Theme.of(context).brightness;
+        final overlayStyle = brightness == Brightness.dark
+            ? const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+                systemNavigationBarColor: Color(0xFF0D1320),
+                systemNavigationBarIconBrightness: Brightness.light,
+              )
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+                systemNavigationBarColor: Color(0xFFF4F7FB),
+                systemNavigationBarIconBrightness: Brightness.dark,
+              );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlayStyle,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       initialRoute: AppRoutes.dashboard,
       getPages: AppPages.routes,
     );

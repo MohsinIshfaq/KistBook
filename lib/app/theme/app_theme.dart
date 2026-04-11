@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
 
@@ -24,6 +25,13 @@ class AppTheme {
         foregroundColor: AppColors.inkStrong,
         elevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: AppColors.canvas,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -133,6 +141,13 @@ class AppTheme {
         foregroundColor: darkInkStrong,
         elevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: darkCanvas,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
         iconTheme: IconThemeData(color: darkInkStrong),
         actionsIconTheme: IconThemeData(color: darkInkStrong),
         titleTextStyle: TextStyle(
