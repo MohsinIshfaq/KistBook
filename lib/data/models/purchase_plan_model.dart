@@ -85,6 +85,44 @@ class PurchasePlanModel implements BaseModel {
   int? get primaryProductId =>
       productId ?? (productIds.isEmpty ? null : productIds.first);
 
+  PurchasePlanModel copyWith({
+    int? id,
+    int? customerId,
+    int? productId,
+    int? quantity,
+    double? unitPrice,
+    List<int>? productIds,
+    List<PlanProductSelection>? productSelections,
+    String? itemName,
+    double? totalAmount,
+    double? depositAmount,
+    double? installmentAmount,
+    int? installmentCount,
+    int? frequencyDays,
+    DateTime? startDate,
+    String? notes,
+    DateTime? createdAt,
+  }) {
+    return PurchasePlanModel(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      productId: productId ?? this.productId,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
+      productIds: productIds ?? this.productIds,
+      productSelections: productSelections ?? this.productSelections,
+      itemName: itemName ?? this.itemName,
+      totalAmount: totalAmount ?? this.totalAmount,
+      depositAmount: depositAmount ?? this.depositAmount,
+      installmentAmount: installmentAmount ?? this.installmentAmount,
+      installmentCount: installmentCount ?? this.installmentCount,
+      frequencyDays: frequencyDays ?? this.frequencyDays,
+      startDate: startDate ?? this.startDate,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   @override
   Map<String, Object?> toMap() => {
         'id': id,

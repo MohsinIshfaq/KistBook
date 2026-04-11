@@ -7,6 +7,8 @@ import '../../core/constants/app_enums.dart';
 import '../../core/utils/currency_helper.dart';
 import '../../core/widgets/app_shell.dart';
 import '../../core/widgets/status_badge.dart';
+import '../../data/models/dashboard_models.dart';
+import 'installment_plan_detail_view.dart';
 import 'installment_plan_generator.dart';
 import 'installment_controller.dart';
 
@@ -35,19 +37,49 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
           if (logic.isLoading && logic.installments.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
+          final grouped = <int, List<DueInstallmentDetail>>{};
+          for (final item in logic.installments) {
+            grouped.putIfAbsent(item.plan.id ?? 0, () => []).add(item);
+          }
+          final summaries = grouped.values.map((items) {
+            items.sort(
+              (a, b) => a.installment.currentDueDate.compareTo(b.installment.currentDueDate),
+            );
+            final first = items.first;
+            return InstallmentPlanSummary(
+              customer: first.customer,
+              plan: first.plan,
+              product: first.product,
+              installments: items.map((item) => item.installment).toList(),
+            );
+          }).toList()
+            ..sort((a, b) {
+              final firstDate = a.nextDueDate ?? DateTime(2100);
+              final secondDate = b.nextDueDate ?? DateTime(2100);
+              return firstDate.compareTo(secondDate);
+            });
+
+          if (summaries.isEmpty) {
+            return const Center(child: Text('No installment plans available.'));
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.all(24),
-            itemCount: logic.installments.length,
+            itemCount: summaries.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final detail = logic.installments[index];
-              final status = detail.installment.visualStatus(DateTime.now());
+              final summary = summaries[index];
+              final status = summary.status;
               return Card(
                 color: cardBackground,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(28),
+                  onTap: () => Get.to(
+                    () => const InstallmentPlanDetailView(),
+                    arguments: summary,
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -75,16 +107,16 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    detail.customer.name,
+                                    summary.customer.name,
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
                                       color: primaryText,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    detail.product?.name ?? detail.plan.itemName,
+                                    summary.product?.name ?? summary.plan.itemName,
                                     style: const TextStyle(
                                       color: AppColors.brandAccent,
                                       fontSize: 13,
@@ -101,7 +133,7 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                                 const SizedBox(height: 8),
                                 Text(
                                   CurrencyHelper.pkr.format(
-                                    detail.installment.remainingAmount,
+                                    summary.remainingAmount,
                                   ),
                                   style: TextStyle(
                                     color: primaryText,
@@ -120,7 +152,7 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Due: ${detail.installment.currentDueDate.toLocal().toString().split(' ').first}',
+                                'Next due: ${summary.nextDueDate == null ? 'N/A' : summary.nextDueDate!.toLocal().toString().split(' ').first}',
                                 style: TextStyle(
                                   color: secondaryText,
                                   fontSize: 13,
@@ -129,7 +161,7 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                               ),
                             ),
                             Text(
-                              'Installment #${detail.installment.sequenceNumber}',
+                              '${summary.remainingInstallments} remaining',
                               style: TextStyle(
                                 color: mutedText,
                                 fontSize: 12,
@@ -137,18 +169,28 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                             ),
                           ],
                         ),
-                        if (detail.installment.wasMissed) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            'Missed installment carried forward without changing the remaining schedule.',
-                            style: TextStyle(
-                              color: isDark ? const Color(0xFFFCA5A5) : AppColors.danger,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              height: 1.35,
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _infoChip(
+                              context,
+                              label: 'Total',
+                              value: CurrencyHelper.pkr.format(summary.plan.totalAmount),
                             ),
-                          ),
-                        ],
+                            _infoChip(
+                              context,
+                              label: 'Collected',
+                              value: CurrencyHelper.pkr.format(summary.collectedAmount),
+                            ),
+                            _infoChip(
+                              context,
+                              label: 'Installment',
+                              value: CurrencyHelper.pkr.format(summary.plan.installmentAmount),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -157,6 +199,42 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _infoChip(
+    BuildContext context, {
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.04)
+            : AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

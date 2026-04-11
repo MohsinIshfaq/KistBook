@@ -83,6 +83,15 @@ class InstallmentController extends GetxController {
     }
     await loadData();
   }
+
+  Future<InstallmentPlanSummary?> updatePlan(PurchasePlanModel plan) async {
+    await _installmentRepository.updatePlanConfiguration(plan);
+    await loadData();
+    if (plan.id == null) {
+      return null;
+    }
+    return _installmentRepository.fetchPlanSummary(plan.id!);
+  }
 }
 
 class CreatePlanProductInput {

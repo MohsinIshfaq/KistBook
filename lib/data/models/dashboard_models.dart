@@ -1,3 +1,4 @@
+import '../../core/constants/app_enums.dart';
 import '../../core/utils/currency_helper.dart';
 import 'customer_model.dart';
 import 'installment_model.dart';
@@ -17,6 +18,44 @@ class DueInstallmentDetail {
   final PurchasePlanModel plan;
   final InstallmentModel installment;
   final ProductModel? product;
+}
+
+class InstallmentPlanSummary {
+  const InstallmentPlanSummary({
+    required this.customer,
+    required this.plan,
+    required this.product,
+    required this.installments,
+  });
+
+  final CustomerModel customer;
+  final PurchasePlanModel plan;
+  final ProductModel? product;
+  final List<InstallmentModel> installments;
+
+  double get remainingAmount => installments.fold(
+        0,
+        (sum, item) => sum + item.remainingAmount.clamp(0, double.infinity),
+      );
+
+  double get collectedAmount =>
+      (plan.totalAmount - remainingAmount).clamp(0, double.infinity);
+
+  int get remainingInstallments =>
+      installments.where((item) => !item.isPaid).length;
+
+  InstallmentModel? get nextInstallment =>
+      installments.isEmpty ? null : installments.first;
+
+  DateTime? get nextDueDate => nextInstallment?.currentDueDate;
+
+  InstallmentVisualStatus get status {
+    final next = nextInstallment;
+    if (next == null) {
+      return InstallmentVisualStatus.paid;
+    }
+    return next.visualStatus(DateTime.now());
+  }
 }
 
 class DashboardSnapshot {

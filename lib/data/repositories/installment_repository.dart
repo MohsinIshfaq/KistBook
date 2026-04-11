@@ -122,4 +122,111 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     }
     return details;
   }
+
+  Future<InstallmentPlanSummary?> fetchPlanSummary(int planId) async {
+    final db = await super.db;
+    await reconcileInstallments();
+
+    final planRow = await db.query(
+      DbConstants.plans,
+      where: 'id = ?',
+      whereArgs: [planId],
+      limit: 1,
+    );
+    if (planRow.isEmpty) {
+      return null;
+    }
+
+    final plan = PurchasePlanModel.fromMap(planRow.first);
+    final customerRow = await db.query(
+      DbConstants.customers,
+      where: 'id = ?',
+      whereArgs: [plan.customerId],
+      limit: 1,
+    );
+    if (customerRow.isEmpty) {
+      return null;
+    }
+
+    final installmentRows = await db.query(
+      DbConstants.installments,
+      where: 'plan_id = ?',
+      whereArgs: [planId],
+      orderBy: 'current_due_date ASC, sequence_number ASC',
+    );
+    final installments = installmentRows.map(InstallmentModel.fromMap).toList();
+
+    ProductModel? product;
+    if (plan.primaryProductId != null) {
+      final productRow = await db.query(
+        DbConstants.products,
+        where: 'id = ?',
+        whereArgs: [plan.primaryProductId],
+        limit: 1,
+      );
+      if (productRow.isNotEmpty) {
+        product = ProductModel.fromMap(productRow.first);
+      }
+    }
+
+    return InstallmentPlanSummary(
+      customer: CustomerModel.fromMap(customerRow.first),
+      plan: plan,
+      product: product,
+      installments: installments,
+    );
+  }
+
+  Future<void> updatePlanConfiguration(PurchasePlanModel updatedPlan) async {
+    final db = await super.db;
+    await db.transaction((txn) async {
+      final existingRows = await txn.query(
+        DbConstants.installments,
+        where: 'plan_id = ?',
+        whereArgs: [updatedPlan.id],
+        orderBy: 'sequence_number ASC',
+      );
+      final installments = existingRows.map(InstallmentModel.fromMap).toList();
+      final paidInstallments = installments.where((item) => item.paidAmount > 0).toList();
+      final unpaidInstallments = installments.where((item) => item.paidAmount <= 0).toList();
+      final paidAmount = installments.fold<double>(0, (sum, item) => sum + item.paidAmount);
+
+      await txn.update(
+        DbConstants.plans,
+        updatedPlan.toMap()..remove('id'),
+        where: 'id = ?',
+        whereArgs: [updatedPlan.id],
+      );
+
+      for (final installment in unpaidInstallments) {
+        await txn.delete(
+          DbConstants.installments,
+          where: 'id = ?',
+          whereArgs: [installment.id],
+        );
+      }
+
+      final financedAmount = max(0.0, updatedPlan.totalAmount - updatedPlan.depositAmount);
+      var remainingAmount = max(0.0, financedAmount - paidAmount);
+      var sequence = paidInstallments.length + 1;
+      var dueDate = DateHelper.startOfDay(updatedPlan.startDate);
+
+      while (remainingAmount > 0.009 && updatedPlan.installmentAmount > 0) {
+        final shiftedDueDate = DateHelper.shiftFridayToSaturday(dueDate);
+        final amount = min(updatedPlan.installmentAmount, remainingAmount);
+        await txn.insert(DbConstants.installments, {
+          'plan_id': updatedPlan.id,
+          'sequence_number': sequence,
+          'scheduled_due_date': shiftedDueDate.toIso8601String(),
+          'current_due_date': shiftedDueDate.toIso8601String(),
+          'amount': amount,
+          'paid_amount': 0.0,
+          'status': InstallmentRecordStatus.pending.name,
+        });
+        remainingAmount -= amount;
+        sequence += 1;
+        dueDate = dueDate.add(Duration(days: updatedPlan.frequencyDays));
+      }
+    });
+  }
 }
