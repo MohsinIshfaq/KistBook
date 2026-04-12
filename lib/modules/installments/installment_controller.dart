@@ -27,6 +27,7 @@ class InstallmentController extends GetxController {
   List<DueInstallmentDetail> installments = [];
   List<CustomerModel> customers = [];
   List<ProductModel> products = [];
+  Map<int, CustomerPaymentInsight> customerInsights = {};
   bool isLoading = false;
 
   @override
@@ -41,6 +42,7 @@ class InstallmentController extends GetxController {
     customers = await _customerRepository.fetchCustomers();
     products = await _productRepository.fetchProducts();
     installments = await _installmentRepository.fetchActiveInstallments();
+    customerInsights = await _customerRepository.fetchCustomerPaymentInsights();
     isLoading = false;
     update();
   }

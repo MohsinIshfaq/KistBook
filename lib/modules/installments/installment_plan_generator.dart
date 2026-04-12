@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/app_dropdown_field.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/customer_model.dart';
+import '../../data/models/dashboard_models.dart';
 import '../../data/models/product_model.dart';
 import 'installment_controller.dart';
 
@@ -27,6 +29,18 @@ class _InstallmentPlanGeneratorState extends State<InstallmentPlanGenerator> {
   final Map<int, _PerProductPlanTerms> perProductTerms = {};
   bool useCommonTerms = true;
   DateTime dueDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final args = Get.arguments;
+    if (args is Map<String, dynamic>) {
+      final customerId = args['customerId'];
+      if (customerId is int) {
+        selectedCustomerId = customerId;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -57,6 +71,8 @@ class _InstallmentPlanGeneratorState extends State<InstallmentPlanGenerator> {
   ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final insight = controller.customerInsights[customer.id];
+    final ratingColor = _ratingColor(insight);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -135,10 +151,81 @@ class _InstallmentPlanGeneratorState extends State<InstallmentPlanGenerator> {
                   'Address: ${customer.address}',
                   style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildInsightChip(
+                      context,
+                      label: insight == null || !insight.hasHistory
+                          ? 'New customer'
+                          : '${insight.onTimePercentageLabel} on-time',
+                      color: ratingColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        insight?.currentPlanStatus ?? 'No previous plan',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Get.toNamed(
+                          AppRoutes.customerPaymentInsight,
+                          arguments: {
+                            'customer': customer,
+                            'insight': insight,
+                          },
+                        );
+                      },
+                      child: const Text('View detail'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Color _ratingColor(CustomerPaymentInsight? insight) {
+    if (insight == null || !insight.hasHistory || insight.maturedInstallments == 0) {
+      return AppColors.info;
+    }
+    if (insight.onTimePercentage >= 90) {
+      return AppColors.success;
+    }
+    if (insight.onTimePercentage >= 75) {
+      return AppColors.brandAccent;
+    }
+    if (insight.onTimePercentage >= 50) {
+      return AppColors.warning;
+    }
+    return AppColors.danger;
+  }
+
+  Widget _buildInsightChip(
+    BuildContext context, {
+    required String label,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -282,6 +369,10 @@ class _InstallmentPlanGeneratorState extends State<InstallmentPlanGenerator> {
       body: GetBuilder<InstallmentController>(
         builder: (logic) {
           selectedCustomerId ??= logic.customers.isEmpty ? null : logic.customers.first.id;
+          if (selectedCustomerId != null &&
+              !logic.customers.any((item) => item.id == selectedCustomerId)) {
+            selectedCustomerId = logic.customers.isEmpty ? null : logic.customers.first.id;
+          }
           CustomerModel? selectedCustomer;
           for (final item in logic.customers) {
             if (item.id == selectedCustomerId) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../app/bindings/installment_binding.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/utils/currency_helper.dart';
 import '../../core/widgets/app_text_field.dart';
@@ -10,6 +11,7 @@ import '../../data/models/product_model.dart';
 import '../../data/models/purchase_plan_model.dart';
 import '../../data/repositories/customer_repository.dart';
 import 'installment_controller.dart';
+import 'installment_plan_generator.dart';
 
 class InstallmentPlanEditView extends StatefulWidget {
   const InstallmentPlanEditView({super.key});
@@ -66,6 +68,14 @@ class _InstallmentPlanEditViewState extends State<InstallmentPlanEditView> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const Text('Edit Installment Plan'),
+        actions: [
+          TextButton.icon(
+            onPressed: _openAddPlan,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add Plan'),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -232,6 +242,20 @@ class _InstallmentPlanEditViewState extends State<InstallmentPlanEditView> {
       }
     }
     return null;
+  }
+
+  Future<void> _openAddPlan() async {
+    if (!Get.isRegistered<InstallmentController>()) {
+      InstallmentBinding().dependencies();
+    }
+    await Get.to(
+      () => const InstallmentPlanGenerator(),
+      arguments: {'customerId': summary.customer.id},
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadProfile();
   }
 
   Future<void> _editPlanCard(PurchasePlanModel plan, ProductModel? product) async {

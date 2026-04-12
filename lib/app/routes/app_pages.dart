@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../modules/customers/customer_detail_view.dart';
 import '../../modules/customers/customer_form_view.dart';
 import '../../modules/customers/customer_list_view.dart';
+import '../../modules/customers/customer_payment_insight_view.dart';
 import '../../modules/dashboard/dashboard_view.dart';
 import '../../modules/installments/daily_installment_collection_view.dart';
 import '../../modules/installments/installment_schedule_view.dart';
@@ -40,6 +41,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.customerDetail,
       page: () => const CustomerDetailView(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.customerPaymentInsight,
+      page: () => const CustomerPaymentInsightView(),
       binding: CustomerBinding(),
     ),
     GetPage(

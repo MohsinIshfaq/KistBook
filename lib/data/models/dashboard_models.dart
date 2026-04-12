@@ -119,3 +119,61 @@ class CustomerProfile {
   final List<PaymentRecordModel> payments;
   final List<CustomerHistoryEntry> history;
 }
+
+class CustomerPaymentInsight {
+  const CustomerPaymentInsight({
+    required this.customerId,
+    required this.onTimePercentage,
+    required this.onTimeInstallments,
+    required this.lateInstallments,
+    required this.maturedInstallments,
+    required this.activePlans,
+    required this.completedPlans,
+    required this.currentPlanStatus,
+    required this.lastPaymentDate,
+  });
+
+  final int customerId;
+  final double onTimePercentage;
+  final int onTimeInstallments;
+  final int lateInstallments;
+  final int maturedInstallments;
+  final int activePlans;
+  final int completedPlans;
+  final String currentPlanStatus;
+  final DateTime? lastPaymentDate;
+
+  bool get hasHistory =>
+      maturedInstallments > 0 ||
+      activePlans > 0 ||
+      completedPlans > 0 ||
+      lastPaymentDate != null;
+
+  String get onTimePercentageLabel => '${onTimePercentage.toStringAsFixed(0)}%';
+
+  String get ratingLabel {
+    if (!hasHistory || maturedInstallments == 0) {
+      return 'New';
+    }
+    if (onTimePercentage >= 90) {
+      return 'Excellent';
+    }
+    if (onTimePercentage >= 75) {
+      return 'Good';
+    }
+    if (onTimePercentage >= 50) {
+      return 'Average';
+    }
+    return 'Risky';
+  }
+
+  String get planSummaryLabel {
+    if (activePlans > 0) {
+      return '$activePlans running';
+    }
+    if (completedPlans > 0) {
+      return '$completedPlans completed';
+    }
+    return 'No previous plan';
+  }
+}

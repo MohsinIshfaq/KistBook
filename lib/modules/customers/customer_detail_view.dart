@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/bindings/installment_binding.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/utils/currency_helper.dart';
+import '../../data/models/dashboard_models.dart';
+import '../../data/repositories/installment_repository.dart';
+import '../installments/installment_controller.dart';
+import '../installments/installment_plan_edit_view.dart';
+import '../installments/installment_plan_generator.dart';
 import 'customer_controller.dart';
 
 class CustomerDetailView extends StatefulWidget {
@@ -16,6 +22,7 @@ class CustomerDetailView extends StatefulWidget {
 class _CustomerDetailViewState extends State<CustomerDetailView> {
   final controller = Get.find<CustomerController>();
   final dateFormat = DateFormat('dd MMM yyyy');
+  final installmentRepository = Get.find<InstallmentRepository>();
 
   @override
   void initState() {
@@ -82,6 +89,16 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                     label: 'Address',
                     value: profile.customer.address,
                   ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: () => _openPlanFlow(profile),
+                    icon: Icon(
+                      profile.plans.isEmpty ? Icons.add_card_rounded : Icons.edit_note_rounded,
+                    ),
+                    label: Text(
+                      profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -107,6 +124,38 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
         },
       ),
     );
+  }
+
+  Future<void> _openPlanFlow(CustomerProfile profile) async {
+    if (!Get.isRegistered<InstallmentController>()) {
+      InstallmentBinding().dependencies();
+    }
+
+    if (profile.plans.isEmpty) {
+      await Get.to(
+        () => const InstallmentPlanGenerator(),
+        arguments: {'customerId': profile.customer.id},
+      );
+    } else {
+      final latestPlan = profile.plans.first;
+      final planId = latestPlan.id;
+      if (planId == null) {
+        return;
+      }
+      final summary = await installmentRepository.fetchPlanSummary(planId);
+      if (summary == null) {
+        return;
+      }
+      await Get.to(
+        () => const InstallmentPlanEditView(),
+        arguments: summary,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+    await controller.loadProfile(Get.arguments as int);
   }
 
   Widget _detailRow(

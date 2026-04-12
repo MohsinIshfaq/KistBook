@@ -31,6 +31,7 @@ class DbHelper {
     final directory = await getApplicationDocumentsDirectory();
     final path = p.join(directory.path, DbConstants.databaseName);
 
+    print("** path: $path");
     _database = await openDatabase(
       path,
       version: DbConstants.databaseVersion,

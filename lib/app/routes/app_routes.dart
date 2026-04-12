@@ -3,6 +3,7 @@ abstract class AppRoutes {
   static const customers = '/customers';
   static const customerForm = '/customers/form';
   static const customerDetail = '/customers/detail';
+  static const customerPaymentInsight = '/customers/payment-insight';
   static const products = '/products';
   static const productForm = '/products/form';
   static const productDetail = '/products/detail';
