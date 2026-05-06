@@ -25,12 +25,12 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
     final dividerColor = isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.border;
 
     return AppShell(
-      title: 'Installments',
+      title: 'Installments'.tr,
       currentRoute: AppRoutes.installments,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.to(() => const InstallmentPlanGenerator()),
         icon: const Icon(Icons.add_chart_outlined),
-        label: const Text('New Plan'),
+        label: Text('New Plan'.tr),
       ),
       body: GetBuilder<InstallmentController>(
         builder: (logic) {
@@ -60,7 +60,7 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
             });
 
           if (summaries.isEmpty) {
-            return const Center(child: Text('No installment plans available.'));
+            return Center(child: Text('No installment plans available.'.tr));
           }
 
           return ListView.separated(
@@ -152,7 +152,15 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Next due: ${summary.nextDueDate == null ? 'N/A' : summary.nextDueDate!.toLocal().toString().split(' ').first}',
+                                'Next due: @date'.trParams({
+                                  'date': summary.nextDueDate == null
+                                      ? 'N/A'.tr
+                                      : summary.nextDueDate!
+                                          .toLocal()
+                                          .toString()
+                                          .split(' ')
+                                          .first,
+                                }),
                                 style: TextStyle(
                                   color: secondaryText,
                                   fontSize: 13,
@@ -161,7 +169,8 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                               ),
                             ),
                             Text(
-                              '${summary.remainingInstallments} remaining',
+                              '@count remaining'
+                                  .trParams({'count': '${summary.remainingInstallments}'}),
                               style: TextStyle(
                                 color: mutedText,
                                 fontSize: 12,
@@ -176,17 +185,17 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                           children: [
                             _infoChip(
                               context,
-                              label: 'Total',
+                              label: 'Total'.tr,
                               value: CurrencyHelper.pkr.format(summary.plan.totalAmount),
                             ),
                             _infoChip(
                               context,
-                              label: 'Collected',
+                              label: 'Collected'.tr,
                               value: CurrencyHelper.pkr.format(summary.collectedAmount),
                             ),
                             _infoChip(
                               context,
-                              label: 'Installment',
+                              label: 'Installment'.tr,
                               value: CurrencyHelper.pkr.format(summary.plan.installmentAmount),
                             ),
                           ],

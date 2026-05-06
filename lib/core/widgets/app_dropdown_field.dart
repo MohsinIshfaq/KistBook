@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../app/theme/app_colors.dart';
 
@@ -79,7 +80,7 @@ class AppDropdownField<T> extends StatelessWidget {
                         pageBuilder: (context, animation, secondaryAnimation) =>
                             _SearchableSelectionPage<T>(
                           title: sheetTitle ?? label,
-                          hint: searchHint ?? 'Search $label',
+                          hint: searchHint ?? 'Search @label'.trParams({'label': label}),
                           items: items,
                           itemLabelBuilder: itemLabelBuilder,
                           itemSearchTextBuilder: itemSearchTextBuilder,
@@ -118,7 +119,7 @@ class AppDropdownField<T> extends StatelessWidget {
                       builder: (context) {
                         return _SearchableSelectionSheet<T>(
                           title: sheetTitle ?? label,
-                          hint: searchHint ?? 'Search $label',
+                          hint: searchHint ?? 'Search @label'.trParams({'label': label}),
                           items: items,
                           itemLabelBuilder: itemLabelBuilder,
                           itemSearchTextBuilder: itemSearchTextBuilder,
@@ -250,7 +251,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                   child: Row(
                     children: [
                       Text(
-                        'Select Customer',
+                        'Select Customer'.tr,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: theme.colorScheme.onSurface,
                           fontWeight: FontWeight.w800,
@@ -298,7 +299,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                     child: filtered.isEmpty
                         ? Center(
                             child: Text(
-                              'No results found',
+                              'No results found'.tr,
                               style: theme.textTheme.bodyMedium,
                             ),
                           )
@@ -360,7 +361,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                     children: [
                       Text(
                         selectedValue == null
-                            ? 'No customer selected'
+                            ? 'No customer selected'.tr
                             : widget.itemLabelBuilder(selectedValue as T),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface,
@@ -378,7 +379,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                               ),
-                              child: const Text('Cancel'),
+                              child: Text('Cancel'.tr),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -391,7 +392,7 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                               ),
-                              child: const Text('Done'),
+                              child: Text('Save'.tr),
                             ),
                           ),
                         ],
@@ -499,7 +500,7 @@ class _SearchableSelectionSheetState<T>
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'No results found',
+                          'No results found'.tr,
                           style: TextStyle(
                             color: isDark ? Colors.white70 : AppColors.inkSoft,
                           ),

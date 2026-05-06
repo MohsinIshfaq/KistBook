@@ -103,8 +103,9 @@ void showBannerAlert({
                 const SizedBox(height: 2),
                 Text(
                   messages.length == 1
-                      ? 'Please review the detail below.'
-                      : 'Please review the following ${messages.length} items.',
+                      ? 'Please review the detail below.'.tr
+                      : 'Please review the following @count items.'
+                          .trParams({'count': '${messages.length}'}),
                   style: TextStyle(
                     color: bodyColor,
                     fontSize: 12,

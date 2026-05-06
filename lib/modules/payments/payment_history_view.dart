@@ -16,7 +16,7 @@ class PaymentHistoryView extends GetView<PaymentController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return AppShell(
-      title: 'Payments',
+      title: 'Payments'.tr,
       currentRoute: AppRoutes.payments,
       body: GetBuilder<PaymentController>(
         builder: (logic) {
@@ -54,7 +54,7 @@ class PaymentHistoryView extends GetView<PaymentController> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tracking Only',
+                              'Tracking Only'.tr,
                               style: TextStyle(
                                 color: isDark ? Colors.white : AppColors.inkStrong,
                                 fontSize: 16,
@@ -63,7 +63,7 @@ class PaymentHistoryView extends GetView<PaymentController> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              AppStrings.paymentsTrackingOnly,
+                              AppStrings.paymentsTrackingOnly.tr,
                               style: TextStyle(
                                 color: isDark
                                     ? Colors.white.withValues(alpha: 0.78)
@@ -85,8 +85,8 @@ class PaymentHistoryView extends GetView<PaymentController> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Pending Collection',
+                        Text(
+                          'Pending Collection'.tr,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 12),
@@ -123,7 +123,7 @@ class PaymentHistoryView extends GetView<PaymentController> {
                                         AppRoutes.paymentForm,
                                         arguments: detail,
                                       ),
-                                      child: const Text('Record'),
+                                      child: Text('Record'.tr),
                                     ),
                                   ],
                                 ),
@@ -162,7 +162,7 @@ class PaymentHistoryView extends GetView<PaymentController> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(payment.note.isEmpty ? 'Manual entry' : payment.note),
+                              Text(payment.note.isEmpty ? 'Manual entry'.tr : payment.note),
                             ],
                           ),
                         ),

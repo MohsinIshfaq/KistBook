@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:get/get.dart';
+
 import '../data/repositories/report_repository.dart';
 import 'notification_service.dart';
 
@@ -25,7 +27,9 @@ class BackgroundService {
     final nextMidnight = DateTime(now.year, now.month, now.day + 1);
     _timer = Timer(nextMidnight.difference(now), () async {
       final path = await _reportRepository.generateDailyReport(date: DateTime.now());
-      _notificationService.showInfo('Daily due report generated at $path');
+      _notificationService.showInfo(
+        'Daily due report generated at @path'.trParams({'path': path}),
+      );
       _scheduleNextTick();
     });
   }

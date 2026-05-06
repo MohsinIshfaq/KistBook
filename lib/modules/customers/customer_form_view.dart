@@ -41,19 +41,21 @@ class _CustomerFormViewState extends State<CustomerFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(existing == null ? 'Add Customer' : 'Edit Customer')),
+      appBar: AppBar(
+        title: Text((existing == null ? 'Add Customer' : 'Edit Customer').tr),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           AppTextField(
-            label: 'Customer name',
-            hint: 'Enter customer full name',
+            label: 'Customer name'.tr,
+            hint: 'Enter customer full name'.tr,
             controller: nameController,
             prefixIcon: Icons.person_outline,
             textCapitalization: TextCapitalization.words,
           ),
           AppTextField(
-            label: 'Phone',
+            label: 'Phone'.tr,
             hint: '03001234567',
             controller: phoneController,
             prefixIcon: Icons.call_outlined,
@@ -64,7 +66,7 @@ class _CustomerFormViewState extends State<CustomerFormView> {
             ],
           ),
           AppTextField(
-            label: 'CNIC',
+            label: 'CNIC'.tr,
             hint: '4210112345671',
             controller: cnicController,
             prefixIcon: Icons.badge_outlined,
@@ -75,15 +77,15 @@ class _CustomerFormViewState extends State<CustomerFormView> {
             ],
           ),
           AppTextField(
-            label: 'Address',
-            hint: 'Street, area, city',
+            label: 'Address'.tr,
+            hint: 'Street, area, city'.tr,
             controller: addressController,
             prefixIcon: Icons.location_on_outlined,
             maxLines: 2,
           ),
           AppTextField(
-            label: 'Reference / referred by',
-            hint: 'Enter reference person name',
+            label: 'Reference / referred by'.tr,
+            hint: 'Enter reference person name'.tr,
             controller: referenceController,
             prefixIcon: Icons.groups_outlined,
             textCapitalization: TextCapitalization.words,
@@ -96,16 +98,16 @@ class _CustomerFormViewState extends State<CustomerFormView> {
               final errors = <String>[];
 
               if (customerName.isEmpty) {
-                errors.add('Customer name is required.');
+                errors.add('Customer name is required.'.tr);
               }
               if (address.isEmpty) {
-                errors.add('Address is required.');
+                errors.add('Address is required.'.tr);
               }
 
               if (errors.isNotEmpty) {
                 showBannerAlert(
                   type: BannerStyle.error,
-                  title: 'Validation Errors',
+                  title: 'Validation Errors'.tr,
                   messages: errors,
                   duration: 4,
                 );
@@ -125,7 +127,7 @@ class _CustomerFormViewState extends State<CustomerFormView> {
               );
               Get.back();
             },
-            child: const Text('Save Customer'),
+            child: Text('Save Customer'.tr),
           ),
         ],
       ),

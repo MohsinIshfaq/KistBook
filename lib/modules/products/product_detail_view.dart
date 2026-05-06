@@ -31,7 +31,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Product Detail')),
+      appBar: AppBar(title: Text('Product Detail'.tr)),
       body: GetBuilder<ProductController>(
         builder: (logic) {
           if (logic.isLoading || logic.product == null) {
@@ -45,49 +45,49 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               _summaryCard(
                 context,
                 title: product.name,
-                subtitle: 'Product profile and latest pricing details',
+                subtitle: 'Product profile and latest pricing details'.tr,
                 leadingIcon: Icons.inventory_2_outlined,
                 accentColor: AppColors.brandAccent,
                 children: [
                   _detailRow(
                     context,
                     icon: Icons.business_outlined,
-                    label: 'Brand',
-                    value: product.brandName.isEmpty ? 'Not provided' : product.brandName,
+                    label: 'Brand'.tr,
+                    value: product.brandName.isEmpty ? 'Not provided'.tr : product.brandName,
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.qr_code_2_outlined,
-                    label: 'SKU',
-                    value: product.sku.isEmpty ? 'Not provided' : product.sku,
+                    label: 'SKU'.tr,
+                    value: product.sku.isEmpty ? 'Not provided'.tr : product.sku,
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.payments_outlined,
-                    label: 'Current price',
+                    label: 'Current price'.tr,
                     value: CurrencyHelper.pkr.format(product.salePrice),
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.update_outlined,
-                    label: 'Last updated',
+                    label: 'Last updated'.tr,
                     value: dateFormat.format(product.updatedAt),
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.edit_note_outlined,
-                    label: 'Notes',
-                    value: product.notes.isEmpty ? 'Not provided' : product.notes,
+                    label: 'Notes'.tr,
+                    value: product.notes.isEmpty ? 'Not provided'.tr : product.notes,
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               Text(
-                'Price History',
+                'Price History'.tr,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -98,7 +98,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Text(
-                      'No price history found.',
+                      'No price history found.'.tr,
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
@@ -140,8 +140,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                                 const SizedBox(height: 4),
                                 Text(
                                   entry.previousPrice == null
-                                      ? 'Initial price recorded'
-                                      : 'Updated from ${CurrencyHelper.pkr.format(entry.previousPrice!)}',
+                                      ? 'Initial price recorded'.tr
+                                      : 'Updated from @amount'.trParams({
+                                          'amount': CurrencyHelper.pkr
+                                              .format(entry.previousPrice!),
+                                        }),
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ],

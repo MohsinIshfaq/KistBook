@@ -31,7 +31,7 @@ class _PaymentFormViewState extends State<PaymentFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Record Payment')),
+      appBar: AppBar(title: Text('Record Payment'.tr)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -46,7 +46,9 @@ class _PaymentFormViewState extends State<PaymentFormView> {
                   Text(detail.product?.name ?? detail.plan.itemName),
                   const SizedBox(height: 8),
                   Text(
-                    'Remaining: ${CurrencyHelper.pkr.format(detail.installment.remainingAmount)}',
+                    'Remaining: @amount'.trParams({
+                      'amount': CurrencyHelper.pkr.format(detail.installment.remainingAmount),
+                    }),
                   ),
                 ],
               ),
@@ -55,22 +57,22 @@ class _PaymentFormViewState extends State<PaymentFormView> {
           const SizedBox(height: 12),
           AppTextField(
             controller: amountController,
-            label: 'Amount',
-            hint: 'Enter received amount',
+            label: 'Amount'.tr,
+            hint: 'Enter received amount'.tr,
             prefixIcon: Icons.payments_outlined,
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 12),
           AppTextField(
             controller: noteController,
-            label: 'Note',
-            hint: 'Add payment note',
+            label: 'Note'.tr,
+            hint: 'Add payment note'.tr,
             prefixIcon: Icons.edit_note_outlined,
           ),
           const SizedBox(height: 12),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Payment date'),
+            title: Text('Payment date'.tr),
             subtitle: Text(paidOn.toLocal().toString().split(' ').first),
             onTap: () async {
               final picked = await showDatePicker(
@@ -95,7 +97,7 @@ class _PaymentFormViewState extends State<PaymentFormView> {
               );
               Get.offNamed(AppRoutes.payments);
             },
-            child: const Text('Save Payment'),
+            child: Text('Save Payment'.tr),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../services/background_service.dart';
 import '../../services/notification_service.dart';
+import '../../modules/settings/settings_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -21,6 +22,7 @@ class InitialBinding extends Bindings {
     Get.put(DashboardRepository(Get.find<DbHelper>()), permanent: true);
     Get.put(ReportRepository(Get.find<DbHelper>()), permanent: true);
     Get.put(NotificationService(), permanent: true);
+    Get.find<SettingsController>().load();
     Get.put(
       BackgroundService(
         reportRepository: Get.find<ReportRepository>(),

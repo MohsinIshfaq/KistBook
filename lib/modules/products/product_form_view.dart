@@ -40,40 +40,42 @@ class _ProductFormViewState extends State<ProductFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(existing == null ? 'Add Product' : 'Edit Product')),
+      appBar: AppBar(
+        title: Text((existing == null ? 'Add Product' : 'Edit Product').tr),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           AppTextField(
-            label: 'Brand name',
-            hint: 'Enter brand name',
+            label: 'Brand name'.tr,
+            hint: 'Enter brand name'.tr,
             controller: brandController,
             prefixIcon: Icons.business_outlined,
             textCapitalization: TextCapitalization.words,
           ),
           AppTextField(
-            label: 'Product name',
-            hint: 'Enter product title',
+            label: 'Product name'.tr,
+            hint: 'Enter product title'.tr,
             controller: nameController,
             prefixIcon: Icons.inventory_2_outlined,
             textCapitalization: TextCapitalization.words,
           ),
           AppTextField(
-            label: 'SKU / code',
+            label: 'SKU / code'.tr,
             hint: 'PRD-1001',
             controller: skuController,
             prefixIcon: Icons.qr_code_2_outlined,
           ),
           AppTextField(
-            label: 'Sale price',
+            label: 'Sale price'.tr,
             hint: '15000',
             controller: priceController,
             prefixIcon: Icons.payments_outlined,
             keyboardType: TextInputType.number,
           ),
           AppTextField(
-            label: 'Notes',
-            hint: 'Optional product notes',
+            label: 'Notes'.tr,
+            hint: 'Optional product notes'.tr,
             controller: notesController,
             prefixIcon: Icons.edit_note_outlined,
             maxLines: 2,
@@ -89,34 +91,34 @@ class _ProductFormViewState extends State<ProductFormView> {
               final errors = <String>[];
 
               if (brandName.isEmpty) {
-                errors.add('Brand name is required.');
+                errors.add('Brand name is required.'.tr);
               }
               if (productName.isEmpty) {
-                errors.add('Product name is required.');
+                errors.add('Product name is required.'.tr);
               }
               if (salePrice <= 0) {
-                errors.add('Price must be greater than zero.');
+                errors.add('Price must be greater than zero.'.tr);
               }
               if (productName.length < 2) {
-                errors.add('Product name should be at least 2 characters.');
+                errors.add('Product name should be at least 2 characters.'.tr);
               }
               if (brandName.length < 2) {
-                errors.add('Brand name should be at least 2 characters.');
+                errors.add('Brand name should be at least 2 characters.'.tr);
               }
               if (sku.isNotEmpty && sku.length < 3) {
-                errors.add('SKU/code should be at least 3 characters if provided.');
+                errors.add('SKU/code should be at least 3 characters if provided.'.tr);
               }
               if (salePrice > 999999999) {
-                errors.add('Price looks too high. Please recheck the amount.');
+                errors.add('Price looks too high. Please recheck the amount.'.tr);
               }
               if (notes.length > 250) {
-                errors.add('Notes should be 250 characters or less.');
+                errors.add('Notes should be 250 characters or less.'.tr);
               }
 
               if (errors.isNotEmpty) {
                 showBannerAlert(
                   type: BannerStyle.error,
-                  title: 'Validation Errors',
+                  title: 'Validation Errors'.tr,
                   messages: errors,
                   duration: 4,
                 );
@@ -137,7 +139,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               );
               Get.back();
             },
-            child: const Text('Save Product'),
+            child: Text('Save Product'.tr),
           ),
         ],
       ),

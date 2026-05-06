@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../constants/app_enums.dart';
@@ -18,9 +19,9 @@ class StatusBadge extends StatelessWidget {
     };
     final text = label ??
         switch (status) {
-          InstallmentVisualStatus.paid => 'Paid',
-          InstallmentVisualStatus.overdue => 'Overdue',
-          InstallmentVisualStatus.pending => 'Pending',
+          InstallmentVisualStatus.paid => 'Paid'.tr,
+          InstallmentVisualStatus.overdue => 'Overdue'.tr,
+          InstallmentVisualStatus.pending => 'Pending'.tr,
         };
 
     return Container(

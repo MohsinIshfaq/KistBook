@@ -13,6 +13,7 @@ import '../../modules/products/product_detail_view.dart';
 import '../../modules/products/product_form_view.dart';
 import '../../modules/products/product_list_view.dart';
 import '../../modules/reports/report_view.dart';
+import '../../modules/settings/settings_view.dart';
 import '../bindings/customer_binding.dart';
 import '../bindings/dashboard_binding.dart';
 import '../bindings/installment_binding.dart';
@@ -87,6 +88,10 @@ class AppPages {
       name: AppRoutes.reports,
       page: () => const ReportView(),
       binding: ReportBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.settings,
+      page: () => const SettingsView(),
     ),
   ];
 }

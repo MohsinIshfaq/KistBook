@@ -119,7 +119,7 @@ class _DailyInstallmentCollectionViewState
     );
 
     return AppShell(
-      title: 'Daily Installment',
+      title: 'Daily Installment'.tr,
       currentRoute: AppRoutes.dailyInstallments,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -176,7 +176,8 @@ class _DailyInstallmentCollectionViewState
                                   const SizedBox(height: 4),
                                   Text(
                                     collection.customer.phone.isEmpty
-                                        ? '${collection.items.length} kist due'
+                                        ? '@count kist due'
+                                            .trParams({'count': '${collection.items.length}'})
                                         : collection.customer.phone,
                                     style: TextStyle(
                                       color: secondaryText,
@@ -226,7 +227,10 @@ class _DailyInstallmentCollectionViewState
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Installment #${detail.installment.sequenceNumber}',
+                                            'Installment #@number'.trParams({
+                                              'number':
+                                                  '${detail.installment.sequenceNumber}',
+                                            }),
                                             style: TextStyle(
                                               color: secondaryText,
                                               fontSize: 12,
@@ -258,7 +262,7 @@ class _DailyInstallmentCollectionViewState
                                         onPressed: () async {
                                           await _showCollectionDialog(detail: detail);
                                         },
-                                        child: const Text('Yes'),
+                                        child: Text('Yes'.tr),
                                       ),
                                     ),
                                     const SizedBox(width: 10),
@@ -279,13 +283,16 @@ class _DailyInstallmentCollectionViewState
                                             targetDate: picked,
                                           );
                                           showBannerAlert(
-                                            title: 'Installment Updated',
+                                            title: 'Plan Updated'.tr,
                                             messages: [
-                                              '${detail.customer.name} ki kist ${_dateLabel(picked)} par move kar di gayi hai.',
+                                              '@name installment moved to @date.'.trParams({
+                                                'name': detail.customer.name,
+                                                'date': _dateLabel(picked),
+                                              }),
                                             ],
                                           );
                                         },
-                                        child: const Text('Edit'),
+                                        child: Text('Edit'.tr),
                                       ),
                                     ),
                                   ],
@@ -318,14 +325,15 @@ class _DailyInstallmentCollectionViewState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Single Day Collection',
+              'Single Day Collection'.tr,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Selected date ke customers, product name, installment amount aur collection action yahan show hotay hain.',
+              'Selected date ke customers, product name, installment amount aur collection action yahan show hotay hain.'
+                  .tr,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -382,7 +390,7 @@ class _DailyInstallmentCollectionViewState
                                 vertical: 10,
                               ),
                             ),
-                            child: const Text('Today'),
+                            child: Text('Today'.tr),
                           ),
                         ],
                       ),
@@ -403,17 +411,17 @@ class _DailyInstallmentCollectionViewState
               children: [
                 _infoChip(
                   context,
-                  label: 'Selected date',
+                  label: 'Selected date'.tr,
                   value: _dateLabel(selectedDate),
                 ),
                 _infoChip(
                   context,
-                  label: 'Customers due',
+                  label: 'Customers due'.tr,
                   value: '$customerCount',
                 ),
                 _infoChip(
                   context,
-                  label: 'Total collectible',
+                  label: 'Total collectible'.tr,
                   value: CurrencyHelper.pkr.format(totalCollectible),
                 ),
               ],
@@ -421,7 +429,7 @@ class _DailyInstallmentCollectionViewState
             if (customerCount == 0) ...[
               const SizedBox(height: 14),
               Text(
-                'Is date par koi kist due nahi mili.',
+                'Is date par koi kist due nahi mili.'.tr,
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -480,7 +488,7 @@ class _DailyInstallmentCollectionViewState
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Collect Installment'),
+          title: Text('Collect Installment'.tr),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,8 +506,8 @@ class _DailyInstallmentCollectionViewState
               ),
               const SizedBox(height: 14),
               AppTextField(
-                label: 'Amount',
-                hint: 'Enter amount',
+                label: 'Amount'.tr,
+                hint: 'Enter amount'.tr,
                 controller: amountController,
                 prefixIcon: Icons.payments_outlined,
                 keyboardType: TextInputType.number,
@@ -509,11 +517,11 @@ class _DailyInstallmentCollectionViewState
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text('Cancel'.tr),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Save'),
+              child: Text('Save'.tr),
             ),
           ],
         );
@@ -531,17 +539,20 @@ class _DailyInstallmentCollectionViewState
     if (enteredAmount <= 0) {
       showBannerAlert(
         type: BannerStyle.error,
-        title: 'Invalid Amount',
-        messages: ['Please enter a valid installment amount.'],
+        title: 'Invalid Amount'.tr,
+        messages: ['Please enter a valid installment amount.'.tr],
       );
       return;
     }
 
     await _collectInstallment(detail: detail, amount: enteredAmount);
     showBannerAlert(
-      title: 'Installment Collected',
+      title: 'Installment Collected'.tr,
       messages: [
-        '${detail.customer.name} se ${CurrencyHelper.pkr.format(enteredAmount)} receive mark kar di gayi hai.',
+        '@name se @amount receive mark kar di gayi hai.'.trParams({
+          'name': detail.customer.name,
+          'amount': CurrencyHelper.pkr.format(enteredAmount),
+        }),
       ],
     );
   }

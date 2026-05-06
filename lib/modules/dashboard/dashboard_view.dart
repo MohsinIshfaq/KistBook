@@ -18,7 +18,7 @@ class DashboardView extends GetView<DashboardController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return AppShell(
-      title: 'Dashboard',
+      title: 'Dashboard'.tr,
       currentRoute: AppRoutes.dashboard,
       actions: [
         IconButton(
@@ -33,7 +33,7 @@ class DashboardView extends GetView<DashboardController> {
           }
           final snapshot = logic.snapshot;
           if (snapshot == null) {
-            return const Center(child: Text('No dashboard data available.'));
+            return Center(child: Text('No dashboard data available.'.tr));
           }
           return ListView(
             padding: const EdgeInsets.all(24),
@@ -71,8 +71,8 @@ class DashboardView extends GetView<DashboardController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Business Overview',
+                              Text(
+                                'Business Overview'.tr,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -81,7 +81,8 @@ class DashboardView extends GetView<DashboardController> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Monitor collections, pending dues, and customer activity in one place.',
+                                'Monitor collections, pending dues, and customer activity in one place.'
+                                    .tr,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.84),
                                   height: 1.4,
@@ -97,9 +98,12 @@ class DashboardView extends GetView<DashboardController> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _heroChip('Outstanding', snapshot.totalOutstandingLabel),
-                        _heroChip('Collected', snapshot.totalCollectedLabel),
-                        _heroChip('Pending Today', '${snapshot.dueToday.length} items'),
+                        _heroChip('Outstanding'.tr, snapshot.totalOutstandingLabel),
+                        _heroChip('Collected'.tr, snapshot.totalCollectedLabel),
+                        _heroChip(
+                          'Pending Today'.tr,
+                          '@count items'.trParams({'count': '${snapshot.dueToday.length}'}),
+                        ),
                       ],
                     ),
                   ],
@@ -111,28 +115,28 @@ class DashboardView extends GetView<DashboardController> {
                 runSpacing: 16,
                 children: [
                   MetricCard(
-                    label: 'Customers',
+                    label: 'Customers'.tr,
                     value: '${snapshot.customers.length}',
                     accent: AppColors.info,
-                    caption: 'Registered profiles',
+                    caption: 'Registered profiles'.tr,
                   ),
                   MetricCard(
-                    label: 'Due Today',
+                    label: 'Pending Today'.tr,
                     value: '${snapshot.dueToday.length}',
                     accent: AppColors.warning,
-                    caption: 'Installments due today',
+                    caption: 'Installments due today'.tr,
                   ),
                   MetricCard(
-                    label: 'Overdue',
+                    label: 'Overdue'.tr,
                     value: '${snapshot.overdue.length}',
                     accent: AppColors.danger,
-                    caption: 'Missed or delayed entries',
+                    caption: 'Missed or delayed entries'.tr,
                   ),
                   MetricCard(
-                    label: 'Collected',
+                    label: 'Collected'.tr,
                     value: snapshot.totalCollectedLabel,
                     accent: AppColors.success,
-                    caption: 'Tracked receipts only',
+                    caption: 'Tracked receipts only'.tr,
                   ),
                 ],
               ),
@@ -145,9 +149,9 @@ class DashboardView extends GetView<DashboardController> {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Today Alerts',
+                              'Today Alerts'.tr,
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -159,13 +163,16 @@ class DashboardView extends GetView<DashboardController> {
                                   : AppColors.surfaceTint,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text('${snapshot.dueToday.length} active'),
+                            child: Text(
+                              '@count active'
+                                  .trParams({'count': '${snapshot.dueToday.length}'}),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       if (snapshot.dueToday.isEmpty)
-                        const Text('No installments due today.')
+                        Text('No installments due today.'.tr)
                       else
                         ...snapshot.dueToday.map(
                           (detail) => Container(
@@ -241,9 +248,9 @@ class DashboardView extends GetView<DashboardController> {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Daily PDF Report',
+                              'Daily PDF Report'.tr,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -255,7 +262,7 @@ class DashboardView extends GetView<DashboardController> {
                               await logic.generateTodayReport();
                               if (logic.reportPath != null) {
                                 showBannerAlert(
-                                  title: 'Report Generated',
+                                  title: 'Report Generated'.tr,
                                   messages: [logic.reportPath!],
                                 );
                               }

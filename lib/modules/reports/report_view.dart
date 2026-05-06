@@ -13,7 +13,7 @@ class ReportView extends GetView<ReportController> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Reports',
+      title: 'Reports'.tr,
       currentRoute: AppRoutes.reports,
       actions: [
         IconButton(
@@ -35,8 +35,8 @@ class ReportView extends GetView<ReportController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Daily Due Installment PDF',
+                      Text(
+                        'Daily Due Installment PDF'.tr,
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
@@ -45,13 +45,13 @@ class ReportView extends GetView<ReportController> {
                           await logic.generateReport();
                           if (logic.reportPath != null) {
                             showBannerAlert(
-                              title: 'Report Saved',
+                              title: 'Report Saved'.tr,
                               messages: [logic.reportPath!],
                             );
                           }
                         },
                         icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Generate today report'),
+                        label: Text('Generate today report'.tr),
                       ),
                       if (logic.reportPath != null) ...[
                         const SizedBox(height: 12),

@@ -44,7 +44,7 @@ class AppShell extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Manage customers, installments, and reports',
+              'Manage customers, installments, and reports'.tr,
               style: TextStyle(
                 color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.92),
                 fontSize: 13,
@@ -55,13 +55,13 @@ class AppShell extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            tooltip: Get.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+            tooltip: 'Settings'.tr,
             onPressed: () {
-              Get.changeThemeMode(Get.isDarkMode ? ThemeMode.light : ThemeMode.dark);
+              if (currentRoute != AppRoutes.settings) {
+                Get.toNamed(AppRoutes.settings);
+              }
             },
-            icon: Icon(
-              Get.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-            ),
+            icon: const Icon(Icons.tune_rounded),
           ),
           if (actions != null) ...actions!,
           const SizedBox(width: 12),
@@ -82,16 +82,16 @@ class AppShell extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 24,
                     backgroundColor: Color(0x1FFFFFFF),
                     child: Icon(Icons.auto_graph_rounded, color: Colors.white),
                   ),
-                  SizedBox(height: 18),
-                  Text(
+                  const SizedBox(height: 18),
+                  const Text(
                     AppStrings.appName,
                     style: TextStyle(
                       color: Colors.white,
@@ -99,9 +99,9 @@ class AppShell extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text(
-                    'Installment operations for modern micro business teams',
+                    'Installment operations for modern micro business teams'.tr,
                     style: TextStyle(
                       color: Color(0xFFD0D5DD),
                       height: 1.4,
@@ -114,7 +114,7 @@ class AppShell extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                'Workspace',
+                'Workspace'.tr,
                 style: TextStyle(
                   color: drawerSectionText,
                   fontSize: 12,
@@ -125,45 +125,51 @@ class AppShell extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _NavTile(
-              label: 'Dashboard',
+              label: 'Dashboard'.tr,
               route: AppRoutes.dashboard,
               icon: Icons.dashboard_outlined,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Customers',
+              label: 'Customers'.tr,
               route: AppRoutes.customers,
               icon: Icons.people_outline,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Products',
+              label: 'Products'.tr,
               route: AppRoutes.products,
               icon: Icons.inventory_2_outlined,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Installments',
+              label: 'Installments'.tr,
               route: AppRoutes.installments,
               icon: Icons.event_note_outlined,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Daily Collection',
+              label: 'Daily Collection'.tr,
               route: AppRoutes.dailyInstallments,
               icon: Icons.today_outlined,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Payments',
+              label: 'Payments'.tr,
               route: AppRoutes.payments,
               icon: Icons.payments_outlined,
               currentRoute: currentRoute,
             ),
             _NavTile(
-              label: 'Reports',
+              label: 'Reports'.tr,
               route: AppRoutes.reports,
               icon: Icons.picture_as_pdf_outlined,
+              currentRoute: currentRoute,
+            ),
+            _NavTile(
+              label: 'Settings'.tr,
+              route: AppRoutes.settings,
+              icon: Icons.settings_outlined,
               currentRoute: currentRoute,
             ),
             const SizedBox(height: 12),
@@ -176,7 +182,8 @@ class AppShell extends StatelessWidget {
                 border: Border.all(color: drawerPanelBorder),
               ),
               child: Text(
-                'Keep the app open at midnight to auto-generate the daily due report in offline mode.',
+                'Keep the app open at midnight to auto-generate the daily due report in offline mode.'
+                    .tr,
                 style: TextStyle(color: drawerMutedText, height: 1.4),
               ),
             ),

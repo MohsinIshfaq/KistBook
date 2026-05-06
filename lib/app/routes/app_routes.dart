@@ -12,4 +12,5 @@ abstract class AppRoutes {
   static const payments = '/payments';
   static const paymentForm = '/payments/form';
   static const reports = '/reports';
+  static const settings = '/settings';
 }

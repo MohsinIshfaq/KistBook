@@ -18,8 +18,8 @@ class CustomerPaymentInsightView extends StatelessWidget {
     final insight = args['insight'] as CustomerPaymentInsight?;
 
     if (customer == null) {
-      return const Scaffold(
-        body: Center(child: Text('Customer not found')),
+      return Scaffold(
+        body: Center(child: Text('Customer not found'.tr)),
       );
     }
 
@@ -27,7 +27,7 @@ class CustomerPaymentInsightView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customer Payment Detail'),
+        title: Text('Customer Payment Detail'.tr),
       ),
       body: FutureBuilder<CustomerProfile?>(
         future: repository.fetchCustomerProfile(customer.id!),
@@ -74,7 +74,7 @@ class CustomerPaymentInsightView extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                insight?.currentPlanStatus ?? 'No previous plan',
+                                insight?.currentPlanStatus ?? 'No previous plan'.tr,
                                 style: theme.textTheme.bodyMedium,
                               ),
                             ],
@@ -90,13 +90,17 @@ class CustomerPaymentInsightView extends StatelessWidget {
                         _chip(
                           context,
                           label: insight == null || !insight.hasHistory
-                              ? 'New customer'
-                              : '${insight.onTimePercentageLabel} on-time',
+                              ? 'New customer'.tr
+                              : '@percent on-time'.trParams({
+                                  'percent': insight.onTimePercentageLabel,
+                                }),
                           color: _ratingColor(insight),
                         ),
                         _chip(
                           context,
-                          label: 'Rating ${insight?.ratingLabel ?? 'New'}',
+                          label: 'Rating @rating'.trParams({
+                            'rating': insight?.ratingLabel ?? 'New'.tr,
+                          }),
                           color: theme.colorScheme.primary,
                         ),
                       ],
@@ -104,17 +108,25 @@ class CustomerPaymentInsightView extends StatelessWidget {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        _metric(context, 'Running plans', '${insight?.activePlans ?? 0}'),
+                        _metric(context, 'Running plans'.tr, '${insight?.activePlans ?? 0}'),
                         const SizedBox(width: 10),
-                        _metric(context, 'Completed', '${insight?.completedPlans ?? 0}'),
+                        _metric(context, 'Completed'.tr, '${insight?.completedPlans ?? 0}'),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _metric(context, 'Late installments', '${insight?.lateInstallments ?? 0}'),
+                        _metric(
+                          context,
+                          'Late installments'.tr,
+                          '${insight?.lateInstallments ?? 0}',
+                        ),
                         const SizedBox(width: 10),
-                        _metric(context, 'Paid on time', '${insight?.onTimeInstallments ?? 0}'),
+                        _metric(
+                          context,
+                          'Paid on time'.tr,
+                          '${insight?.onTimeInstallments ?? 0}',
+                        ),
                       ],
                     ),
                   ],
@@ -122,18 +134,30 @@ class CustomerPaymentInsightView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SectionCard(
-                title: 'Customer Detail',
+                title: 'Customer Detail'.tr,
                 child: Column(
                   children: [
-                    _detailRow(context, 'Phone', customer.phone.isEmpty ? 'Not provided' : customer.phone),
-                    _detailRow(context, 'CNIC', customer.cnic.isEmpty ? 'Not provided' : customer.cnic),
-                    _detailRow(context, 'Reference', customer.reference.isEmpty ? 'Not provided' : customer.reference),
-                    _detailRow(context, 'Address', customer.address),
                     _detailRow(
                       context,
-                      'Last payment',
+                      'Phone'.tr,
+                      customer.phone.isEmpty ? 'Not provided'.tr : customer.phone,
+                    ),
+                    _detailRow(
+                      context,
+                      'CNIC'.tr,
+                      customer.cnic.isEmpty ? 'Not provided'.tr : customer.cnic,
+                    ),
+                    _detailRow(
+                      context,
+                      'Reference'.tr,
+                      customer.reference.isEmpty ? 'Not provided'.tr : customer.reference,
+                    ),
+                    _detailRow(context, 'Address'.tr, customer.address),
+                    _detailRow(
+                      context,
+                      'Last payment'.tr,
                       insight?.lastPaymentDate == null
-                          ? 'No payment yet'
+                          ? 'No payment yet'.tr
                           : '${insight!.lastPaymentDate!.day}-${insight.lastPaymentDate!.month}-${insight.lastPaymentDate!.year}',
                       isLast: true,
                     ),
@@ -142,25 +166,25 @@ class CustomerPaymentInsightView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SectionCard(
-                title: 'Plan Summary',
+                title: 'Plan Summary'.tr,
                 child: Column(
                   children: [
-                    _detailRow(context, 'Total plans', '${profile?.plans.length ?? 0}'),
+                    _detailRow(context, 'Total plans'.tr, '${profile?.plans.length ?? 0}'),
                     _detailRow(
                       context,
-                      'Total payments',
+                      'Total payments'.tr,
                       '${profile?.payments.length ?? 0}',
                     ),
                     _detailRow(
                       context,
-                      'Collected amount',
+                      'Collected amount'.tr,
                       CurrencyHelper.pkr.format(
                         profile?.payments.fold<double>(0, (sum, item) => sum + item.amount) ?? 0,
                       ),
                     ),
                     _detailRow(
                       context,
-                      'Outstanding amount',
+                      'Outstanding amount'.tr,
                       CurrencyHelper.pkr.format(
                         profile?.installments.fold<double>(
                               0,
@@ -176,7 +200,7 @@ class CustomerPaymentInsightView extends StatelessWidget {
               if ((profile?.plans.isNotEmpty ?? false)) ...[
                 const SizedBox(height: 16),
                 _SectionCard(
-                  title: 'Recent Plans',
+                  title: 'Recent Plans'.tr,
                   child: Column(
                     children: [
                       for (var index = 0; index < profile!.plans.length && index < 3; index++)
@@ -307,7 +331,10 @@ class CustomerPaymentInsightView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Installment ${CurrencyHelper.pkr.format(plan.installmentAmount)} • Every ${plan.frequencyDays} days',
+                  'Installment @amount • Every @days days'.trParams({
+                    'amount': CurrencyHelper.pkr.format(plan.installmentAmount),
+                    'days': '${plan.frequencyDays}',
+                  }),
                   style: theme.textTheme.bodySmall,
                 ),
               ],

@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+
 import '../../core/constants/app_enums.dart';
 import '../../core/utils/currency_helper.dart';
 import 'customer_model.dart';
@@ -153,27 +155,27 @@ class CustomerPaymentInsight {
 
   String get ratingLabel {
     if (!hasHistory || maturedInstallments == 0) {
-      return 'New';
+      return 'New'.tr;
     }
     if (onTimePercentage >= 90) {
-      return 'Excellent';
+      return 'Excellent'.tr;
     }
     if (onTimePercentage >= 75) {
-      return 'Good';
+      return 'Good'.tr;
     }
     if (onTimePercentage >= 50) {
-      return 'Average';
+      return 'Average'.tr;
     }
-    return 'Risky';
+    return 'Risky'.tr;
   }
 
   String get planSummaryLabel {
     if (activePlans > 0) {
-      return '$activePlans running';
+      return '@count running'.trParams({'count': '$activePlans'});
     }
     if (completedPlans > 0) {
-      return '$completedPlans completed';
+      return '@count completed'.trParams({'count': '$completedPlans'});
     }
-    return 'No previous plan';
+    return 'No previous plan'.tr;
   }
 }

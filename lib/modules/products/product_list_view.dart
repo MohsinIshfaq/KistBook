@@ -21,12 +21,12 @@ class ProductListView extends GetView<ProductController> {
     final menuIconColor = isDark ? Colors.white : AppColors.inkStrong;
 
     return AppShell(
-      title: 'Products',
+      title: 'Products'.tr,
       currentRoute: AppRoutes.products,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.toNamed(AppRoutes.productForm),
         icon: const Icon(Icons.add_box_outlined),
-        label: const Text('Add Product'),
+        label: Text('Add Product'.tr),
       ),
       body: GetBuilder<ProductController>(
         builder: (logic) {
@@ -102,9 +102,9 @@ class ProductListView extends GetView<ProductController> {
                                   await logic.deleteProduct(product.id!);
                                 }
                               },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                PopupMenuItem(value: 'delete', child: Text('Delete')),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(value: 'edit', child: Text('Edit'.tr)),
+                                PopupMenuItem(value: 'delete', child: Text('Delete'.tr)),
                               ],
                             ),
                           ],

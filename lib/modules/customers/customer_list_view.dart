@@ -20,12 +20,12 @@ class CustomerListView extends GetView<CustomerController> {
     final menuIconColor = isDark ? Colors.white : AppColors.inkStrong;
 
     return AppShell(
-      title: 'Customers',
+      title: 'Customers'.tr,
       currentRoute: AppRoutes.customers,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.toNamed(AppRoutes.customerForm),
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add Customer'),
+        label: Text('Add Customer'.tr),
       ),
       body: GetBuilder<CustomerController>(
         builder: (logic) {
@@ -87,7 +87,7 @@ class CustomerListView extends GetView<CustomerController> {
                                   const SizedBox(height: 6),
                                   Text(
                                     customer.reference.isEmpty
-                                        ? 'Direct Customer'
+                                        ? 'Direct Customer'.tr
                                         : customer.reference,
                                     style: const TextStyle(
                                       color: AppColors.brandAccent,
@@ -109,9 +109,9 @@ class CustomerListView extends GetView<CustomerController> {
                                   await logic.deleteCustomer(customer.id!);
                                 }
                               },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                PopupMenuItem(value: 'delete', child: Text('Delete')),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(value: 'edit', child: Text('Edit'.tr)),
+                                PopupMenuItem(value: 'delete', child: Text('Delete'.tr)),
                               ],
                             ),
                           ],

@@ -38,7 +38,7 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Customer Detail')),
+      appBar: AppBar(title: Text('Customer Detail'.tr)),
       body: GetBuilder<CustomerController>(
         builder: (logic) {
           if (logic.isLoading || logic.profile == null) {
@@ -52,41 +52,41 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
               _summaryCard(
                 context,
                 title: profile.customer.name,
-                subtitle: 'Customer profile and installment activity',
+                subtitle: 'Customer profile and installment activity'.tr,
                 leadingIcon: Icons.person_outline_rounded,
                 accentColor: AppColors.brandPrimary,
                 children: [
                   _detailRow(
                     context,
                     icon: Icons.call_outlined,
-                    label: 'Phone',
+                    label: 'Phone'.tr,
                     value: profile.customer.phone.isEmpty
-                        ? 'Not provided'
+                        ? 'Not provided'.tr
                         : profile.customer.phone,
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.badge_outlined,
-                    label: 'CNIC',
+                    label: 'CNIC'.tr,
                     value: profile.customer.cnic.isEmpty
-                        ? 'Not provided'
+                        ? 'Not provided'.tr
                         : profile.customer.cnic,
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.groups_outlined,
-                    label: 'Reference',
+                    label: 'Reference'.tr,
                     value: profile.customer.reference.isEmpty
-                        ? 'Not provided'
+                        ? 'Not provided'.tr
                         : profile.customer.reference,
                   ),
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.location_on_outlined,
-                    label: 'Address',
+                    label: 'Address'.tr,
                     value: profile.customer.address,
                   ),
                   const SizedBox(height: 18),
@@ -96,14 +96,14 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                       profile.plans.isEmpty ? Icons.add_card_rounded : Icons.edit_note_rounded,
                     ),
                     label: Text(
-                      profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans',
+                      (profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans').tr,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               Text(
-                'History',
+                'History'.tr,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
