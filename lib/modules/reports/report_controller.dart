@@ -2,12 +2,17 @@ import 'package:get/get.dart';
 
 import '../../data/models/dashboard_models.dart';
 import '../../data/repositories/report_repository.dart';
+import '../../services/access_control_service.dart';
 
 class ReportController extends GetxController {
-  ReportController({required ReportRepository reportRepository})
-      : _reportRepository = reportRepository;
+  ReportController({
+    required ReportRepository reportRepository,
+    required AccessControlService accessControlService,
+  })  : _reportRepository = reportRepository,
+        _accessControlService = accessControlService;
 
   final ReportRepository _reportRepository;
+  final AccessControlService _accessControlService;
 
   List<DueInstallmentDetail> dueItems = [];
   String? reportPath;
@@ -22,7 +27,9 @@ class ReportController extends GetxController {
   Future<void> loadDueItems() async {
     isLoading = true;
     update();
-    dueItems = await _reportRepository.fetchDueInstallments();
+    dueItems = await _accessControlService.filterDueInstallments(
+      await _reportRepository.fetchDueInstallments(),
+    );
     isLoading = false;
     update();
   }

@@ -20,8 +20,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
         );
 
   Future<void> createPlan(PurchasePlanModel plan) async {
-    final db = await super.db;
-    await db.transaction((txn) async {
+    await synchronizedTransaction((txn) async {
       final planId = await txn.insert(DbConstants.plans, plan.toMap()..remove('id'));
       final financedAmount = max(0.0, plan.totalAmount - plan.depositAmount);
 
@@ -45,33 +44,43 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     });
   }
 
-  Future<void> reconcileInstallments({DateTime? today}) async {
+  Future<List<PurchasePlanModel>> fetchAllPlans() async {
     final db = await super.db;
+    final rows = await db.query(
+      DbConstants.plans,
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(PurchasePlanModel.fromMap).toList();
+  }
+
+  Future<void> reconcileInstallments({DateTime? today}) async {
     final effectiveToday = DateHelper.startOfDay(today ?? DateTime.now());
-    final rows = await db.query(DbConstants.installments);
-    for (final row in rows) {
-      final installment = InstallmentModel.fromMap(row);
-      if (installment.isPaid) {
-        continue;
+    await synchronizedTransaction((txn) async {
+      final rows = await txn.query(DbConstants.installments);
+      for (final row in rows) {
+        final installment = InstallmentModel.fromMap(row);
+        if (installment.isPaid) {
+          continue;
+        }
+        final normalizedDue = DateHelper.shiftFridayToSaturday(installment.currentDueDate);
+        if (!normalizedDue.isBefore(effectiveToday)) {
+          continue;
+        }
+        final carriedDate = DateHelper.reconcileMissedDueDate(
+          currentDueDate: normalizedDue,
+          today: effectiveToday,
+        );
+        await txn.update(
+          DbConstants.installments,
+          {
+            'current_due_date': carriedDate.toIso8601String(),
+            'status': InstallmentRecordStatus.missed.name,
+          },
+          where: 'id = ?',
+          whereArgs: [installment.id],
+        );
       }
-      final normalizedDue = DateHelper.shiftFridayToSaturday(installment.currentDueDate);
-      if (!normalizedDue.isBefore(effectiveToday)) {
-        continue;
-      }
-      final carriedDate = DateHelper.reconcileMissedDueDate(
-        currentDueDate: normalizedDue,
-        today: effectiveToday,
-      );
-      await db.update(
-        DbConstants.installments,
-        {
-          'current_due_date': carriedDate.toIso8601String(),
-          'status': InstallmentRecordStatus.missed.name,
-        },
-        where: 'id = ?',
-        whereArgs: [installment.id],
-      );
-    }
+    });
   }
 
   Future<List<DueInstallmentDetail>> fetchActiveInstallments({DateTime? today}) async {
@@ -178,8 +187,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
   }
 
   Future<void> updatePlanConfiguration(PurchasePlanModel updatedPlan) async {
-    final db = await super.db;
-    await db.transaction((txn) async {
+    await synchronizedTransaction((txn) async {
       final existingRows = await txn.query(
         DbConstants.installments,
         where: 'plan_id = ?',
@@ -234,8 +242,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     required int planId,
     required DateTime targetDate,
   }) async {
-    final db = await super.db;
-    await db.transaction((txn) async {
+    await synchronizedTransaction((txn) async {
       final rows = await txn.query(
         DbConstants.installments,
         where: 'plan_id = ? AND paid_amount < amount',
@@ -270,19 +277,20 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     required int installmentId,
     required DateTime targetDate,
   }) async {
-    final db = await super.db;
     final shiftedDate = DateHelper.shiftFridayToSaturday(
       DateHelper.startOfDay(targetDate),
     );
-    await db.update(
-      DbConstants.installments,
-      {
-        'scheduled_due_date': shiftedDate.toIso8601String(),
-        'current_due_date': shiftedDate.toIso8601String(),
-        'status': InstallmentRecordStatus.pending.name,
-      },
-      where: 'id = ?',
-      whereArgs: [installmentId],
-    );
+    await synchronizedWrite((db) {
+      return db.update(
+        DbConstants.installments,
+        {
+          'scheduled_due_date': shiftedDate.toIso8601String(),
+          'current_due_date': shiftedDate.toIso8601String(),
+          'status': InstallmentRecordStatus.pending.name,
+        },
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+    });
   }
 }

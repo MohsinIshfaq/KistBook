@@ -4,20 +4,25 @@ import '../../data/models/dashboard_models.dart';
 import '../../data/models/payment_record_model.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/payment_repository.dart';
+import '../../services/access_control_service.dart';
 
 class PaymentController extends GetxController {
   PaymentController({
     required PaymentRepository paymentRepository,
     required InstallmentRepository installmentRepository,
+    required AccessControlService accessControlService,
   })  : _paymentRepository = paymentRepository,
-        _installmentRepository = installmentRepository;
+        _installmentRepository = installmentRepository,
+        _accessControlService = accessControlService;
 
   final PaymentRepository _paymentRepository;
   final InstallmentRepository _installmentRepository;
+  final AccessControlService _accessControlService;
 
   List<PaymentRecordModel> payments = [];
   List<DueInstallmentDetail> dueInstallments = [];
   bool isLoading = false;
+  bool isSubmittingPayment = false;
 
   @override
   void onInit() {
@@ -28,8 +33,12 @@ class PaymentController extends GetxController {
   Future<void> loadData() async {
     isLoading = true;
     update();
-    payments = await _paymentRepository.fetchPayments();
-    dueInstallments = await _installmentRepository.fetchActiveInstallments();
+    payments = await _accessControlService.filterPayments(
+      await _paymentRepository.fetchPayments(),
+    );
+    dueInstallments = await _accessControlService.filterDueInstallments(
+      await _installmentRepository.fetchActiveInstallments(),
+    );
     isLoading = false;
     update();
   }
@@ -40,12 +49,22 @@ class PaymentController extends GetxController {
     required DateTime paidOn,
     required String note,
   }) async {
-    await _paymentRepository.addPayment(
-      installmentId: installmentId,
-      amount: amount,
-      paidOn: paidOn,
-      note: note,
-    );
-    await loadData();
+    if (isSubmittingPayment) {
+      return;
+    }
+    isSubmittingPayment = true;
+    update();
+    try {
+      await _paymentRepository.addPayment(
+        installmentId: installmentId,
+        amount: amount,
+        paidOn: paidOn,
+        note: note,
+      );
+      await loadData();
+    } finally {
+      isSubmittingPayment = false;
+      update();
+    }
   }
 }

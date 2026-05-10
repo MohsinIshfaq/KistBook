@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/constants/app_enums.dart';
+import '../../services/background_service.dart';
+import '../../services/session_manager.dart';
 import '../constants/app_strings.dart';
 
 class AppShell extends StatelessWidget {
@@ -23,6 +26,8 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = Get.find<SessionManager>();
+    final isRestrictedUser = session.role != UserRole.owner;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final drawerBackground = isDark ? AppColors.brandSecondary : AppColors.surface;
@@ -107,6 +112,24 @@ class AppShell extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
+                  if (session.fullName.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      session.fullName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${session.role.label} • ${session.phone}',
+                      style: const TextStyle(
+                        color: Color(0xFFD0D5DD),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -130,61 +153,95 @@ class AppShell extends StatelessWidget {
               icon: Icons.dashboard_outlined,
               currentRoute: currentRoute,
             ),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Users'.tr,
+                route: AppRoutes.users,
+                icon: Icons.manage_accounts_outlined,
+                currentRoute: currentRoute,
+              ),
             _NavTile(
               label: 'Customers'.tr,
               route: AppRoutes.customers,
               icon: Icons.people_outline,
               currentRoute: currentRoute,
             ),
-            _NavTile(
-              label: 'Products'.tr,
-              route: AppRoutes.products,
-              icon: Icons.inventory_2_outlined,
-              currentRoute: currentRoute,
-            ),
-            _NavTile(
-              label: 'Installments'.tr,
-              route: AppRoutes.installments,
-              icon: Icons.event_note_outlined,
-              currentRoute: currentRoute,
-            ),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Products'.tr,
+                route: AppRoutes.products,
+                icon: Icons.inventory_2_outlined,
+                currentRoute: currentRoute,
+              ),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Installments'.tr,
+                route: AppRoutes.installments,
+                icon: Icons.event_note_outlined,
+                currentRoute: currentRoute,
+              ),
             _NavTile(
               label: 'Daily Collection'.tr,
               route: AppRoutes.dailyInstallments,
               icon: Icons.today_outlined,
               currentRoute: currentRoute,
             ),
-            _NavTile(
-              label: 'Payments'.tr,
-              route: AppRoutes.payments,
-              icon: Icons.payments_outlined,
-              currentRoute: currentRoute,
-            ),
-            _NavTile(
-              label: 'Reports'.tr,
-              route: AppRoutes.reports,
-              icon: Icons.picture_as_pdf_outlined,
-              currentRoute: currentRoute,
-            ),
-            _NavTile(
-              label: 'Settings'.tr,
-              route: AppRoutes.settings,
-              icon: Icons.settings_outlined,
-              currentRoute: currentRoute,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: drawerPanelColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: drawerPanelBorder),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Payments'.tr,
+                route: AppRoutes.payments,
+                icon: Icons.payments_outlined,
+                currentRoute: currentRoute,
               ),
-              child: Text(
-                'Keep the app open at midnight to auto-generate the daily due report in offline mode.'
-                    .tr,
-                style: TextStyle(color: drawerMutedText, height: 1.4),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Reports'.tr,
+                route: AppRoutes.reports,
+                icon: Icons.picture_as_pdf_outlined,
+                currentRoute: currentRoute,
+              ),
+            if (!isRestrictedUser)
+              _NavTile(
+                label: 'Settings'.tr,
+                route: AppRoutes.settings,
+                icon: Icons.settings_outlined,
+                currentRoute: currentRoute,
+              ),
+            if (!isRestrictedUser)
+              const SizedBox(height: 12),
+            if (!isRestrictedUser)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: drawerPanelColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: drawerPanelBorder),
+                ),
+                child: Text(
+                  'Keep the app open at midnight to auto-generate the daily due report in offline mode.'
+                      .tr,
+                  style: TextStyle(color: drawerMutedText, height: 1.4),
+                ),
+              ),
+            const SizedBox(height: 12),
+            ListTile(
+              onTap: () async {
+                Navigator.of(context).pop();
+                await Get.find<SessionManager>().clearSettings();
+                Get.find<BackgroundService>().dispose();
+                Get.offAllNamed(AppRoutes.login);
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
+              title: Text(
+                'Logout'.tr,
+                style: const TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

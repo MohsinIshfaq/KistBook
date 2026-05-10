@@ -29,77 +29,97 @@ class _PaymentFormViewState extends State<PaymentFormView> {
   }
 
   @override
+  void dispose() {
+    amountController.dispose();
+    noteController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Record Payment'.tr)),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(detail.customer.name, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text(detail.product?.name ?? detail.plan.itemName),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Remaining: @amount'.trParams({
-                      'amount': CurrencyHelper.pkr.format(detail.installment.remainingAmount),
-                    }),
+      body: GetBuilder<PaymentController>(
+        builder: (logic) {
+          return ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(detail.customer.name, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      Text(detail.product?.name ?? detail.plan.itemName),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Remaining: @amount'.trParams({
+                          'amount': CurrencyHelper.pkr.format(detail.installment.remainingAmount),
+                        }),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppTextField(
-            controller: amountController,
-            label: 'Amount'.tr,
-            hint: 'Enter received amount'.tr,
-            prefixIcon: Icons.payments_outlined,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 12),
-          AppTextField(
-            controller: noteController,
-            label: 'Note'.tr,
-            hint: 'Add payment note'.tr,
-            prefixIcon: Icons.edit_note_outlined,
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Payment date'.tr),
-            subtitle: Text(paidOn.toLocal().toString().split(' ').first),
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: paidOn,
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) {
-                setState(() => paidOn = picked);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () async {
-              await controller.addPayment(
-                installmentId: detail.installment.id!,
-                amount: double.tryParse(amountController.text.trim()) ?? 0,
-                paidOn: paidOn,
-                note: noteController.text.trim(),
-              );
-              Get.offNamed(AppRoutes.payments);
-            },
-            child: Text('Save Payment'.tr),
-          ),
-        ],
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: amountController,
+                label: 'Amount'.tr,
+                hint: 'Enter received amount'.tr,
+                prefixIcon: Icons.payments_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: noteController,
+                label: 'Note'.tr,
+                hint: 'Add payment note'.tr,
+                prefixIcon: Icons.edit_note_outlined,
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Payment date'.tr),
+                subtitle: Text(paidOn.toLocal().toString().split(' ').first),
+                onTap: logic.isSubmittingPayment
+                    ? null
+                    : () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: paidOn,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() => paidOn = picked);
+                        }
+                      },
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: logic.isSubmittingPayment
+                    ? null
+                    : () async {
+                        await controller.addPayment(
+                          installmentId: detail.installment.id!,
+                          amount: double.tryParse(amountController.text.trim()) ?? 0,
+                          paidOn: paidOn,
+                          note: noteController.text.trim(),
+                        );
+                        if (!mounted) {
+                          return;
+                        }
+                        Get.offNamed(AppRoutes.payments);
+                      },
+                child: Text(
+                  logic.isSubmittingPayment ? 'Saving...'.tr : 'Save Payment'.tr,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -12,15 +12,21 @@ import 'core/constants/app_strings.dart';
 import 'data/database/db_helper.dart';
 import 'modules/settings/settings_controller.dart';
 import 'services/background_service.dart';
+import 'services/session_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final preferences = await SharedPreferences.getInstance();
   Get.put(SettingsController(preferences), permanent: true);
+  final sessionManager = SessionManager(preferences);
+  Get.put(sessionManager, permanent: true);
   final binding = InitialBinding();
   binding.dependencies();
   await Get.find<DbHelper>().initialize();
-  await Get.find<BackgroundService>().start();
+  await sessionManager.loadData();
+  if (sessionManager.isLoggedIn) {
+    await Get.find<BackgroundService>().start();
+  }
   runApp(const KistBookApp());
 }
 
@@ -69,7 +75,9 @@ class KistBookApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          initialRoute: AppRoutes.dashboard,
+          initialRoute: Get.find<SessionManager>().isLoggedIn
+              ? Get.find<SessionManager>().homeRoute
+              : AppRoutes.login,
           getPages: AppPages.routes,
         );
       },

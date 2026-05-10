@@ -8,6 +8,7 @@ import '../../core/widgets/app_shell.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/metric_card.dart';
 import '../../core/widgets/status_badge.dart';
+import '../../services/session_manager.dart';
 import 'dashboard_controller.dart';
 
 class DashboardView extends GetView<DashboardController> {
@@ -15,6 +16,8 @@ class DashboardView extends GetView<DashboardController> {
 
   @override
   Widget build(BuildContext context) {
+    final session = Get.find<SessionManager>();
+    final isOwner = session.role == UserRole.owner;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return AppShell(
@@ -72,7 +75,7 @@ class DashboardView extends GetView<DashboardController> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Business Overview'.tr,
+                                (isOwner ? 'Business Overview' : 'Assigned Collection Overview').tr,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -81,7 +84,9 @@ class DashboardView extends GetView<DashboardController> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Monitor collections, pending dues, and customer activity in one place.'
+                                (isOwner
+                                        ? 'Monitor collections, pending dues, and customer activity in one place.'
+                                        : 'Monitor only the customers and plans assigned to your account.')
                                     .tr,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.84),
@@ -136,7 +141,7 @@ class DashboardView extends GetView<DashboardController> {
                     label: 'Collected'.tr,
                     value: snapshot.totalCollectedLabel,
                     accent: AppColors.success,
-                    caption: 'Tracked receipts only'.tr,
+                    caption: (isOwner ? 'Tracked receipts only' : 'Your tracked receipts').tr,
                   ),
                 ],
               ),

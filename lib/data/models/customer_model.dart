@@ -4,6 +4,7 @@ class CustomerModel implements BaseModel {
   static String get createTableQuery => '''
     CREATE TABLE customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      card_number TEXT NOT NULL,
       name TEXT NOT NULL,
       phone TEXT NOT NULL,
       cnic TEXT NOT NULL,
@@ -15,6 +16,7 @@ class CustomerModel implements BaseModel {
 
   const CustomerModel({
     this.id,
+    required this.cardNumber,
     required this.name,
     required this.phone,
     required this.cnic,
@@ -25,6 +27,7 @@ class CustomerModel implements BaseModel {
 
   @override
   final int? id;
+  final String cardNumber;
   final String name;
   final String phone;
   final String cnic;
@@ -34,6 +37,7 @@ class CustomerModel implements BaseModel {
 
   CustomerModel copyWith({
     int? id,
+    String? cardNumber,
     String? name,
     String? phone,
     String? cnic,
@@ -43,6 +47,7 @@ class CustomerModel implements BaseModel {
   }) {
     return CustomerModel(
       id: id ?? this.id,
+      cardNumber: cardNumber ?? this.cardNumber,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       cnic: cnic ?? this.cnic,
@@ -55,6 +60,7 @@ class CustomerModel implements BaseModel {
   @override
   Map<String, Object?> toMap() => {
         'id': id,
+        'card_number': cardNumber,
         'name': name,
         'phone': phone,
         'cnic': cnic,
@@ -71,6 +77,7 @@ class CustomerModel implements BaseModel {
 
   factory CustomerModel.fromMap(Map<String, Object?> map) => CustomerModel(
         id: map['id'] as int?,
+        cardNumber: map['card_number'] as String? ?? '',
         name: map['name'] as String? ?? '',
         phone: map['phone'] as String? ?? '',
         cnic: map['cnic'] as String? ?? '',

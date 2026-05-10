@@ -9,6 +9,7 @@ class PaymentBinding extends Bindings {
       () => PaymentController(
         paymentRepository: Get.find(),
         installmentRepository: Get.find(),
+        accessControlService: Get.find(),
       ),
     );
   }

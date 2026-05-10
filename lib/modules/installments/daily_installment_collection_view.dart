@@ -12,6 +12,7 @@ import '../../data/models/customer_model.dart';
 import '../../data/models/dashboard_models.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/payment_repository.dart';
+import '../../services/access_control_service.dart';
 
 class DailyInstallmentCollectionView extends StatefulWidget {
   const DailyInstallmentCollectionView({super.key});
@@ -25,6 +26,7 @@ class _DailyInstallmentCollectionViewState
     extends State<DailyInstallmentCollectionView> {
   final installmentRepository = Get.find<InstallmentRepository>();
   final paymentRepository = Get.find<PaymentRepository>();
+  final accessControlService = Get.find<AccessControlService>();
 
   DateTime selectedDate = DateHelper.startOfDay(DateTime.now());
   bool isLoading = true;
@@ -38,7 +40,9 @@ class _DailyInstallmentCollectionViewState
 
   Future<void> _loadData() async {
     setState(() => isLoading = true);
-    final items = await installmentRepository.fetchActiveInstallments(today: selectedDate);
+    final items = await accessControlService.filterDueInstallments(
+      await installmentRepository.fetchActiveInstallments(today: selectedDate),
+    );
     if (!mounted) {
       return;
     }
@@ -528,13 +532,19 @@ class _DailyInstallmentCollectionViewState
       },
     );
 
+    void disposeControllerSafely() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        amountController.dispose();
+      });
+    }
+
     if (saved != true) {
-      amountController.dispose();
+      disposeControllerSafely();
       return;
     }
 
     final enteredAmount = double.tryParse(amountController.text.trim()) ?? 0;
-    amountController.dispose();
+    disposeControllerSafely();
 
     if (enteredAmount <= 0) {
       showBannerAlert(

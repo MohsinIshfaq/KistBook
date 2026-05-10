@@ -10,6 +10,7 @@ class InstallmentBinding extends Bindings {
         installmentRepository: Get.find(),
         customerRepository: Get.find(),
         productRepository: Get.find(),
+        accessControlService: Get.find(),
       ),
     );
   }

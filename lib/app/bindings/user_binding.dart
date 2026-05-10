@@ -1,15 +1,15 @@
 import 'package:get/get.dart';
 
-import '../../modules/customers/customer_controller.dart';
+import '../../modules/users/user_controller.dart';
 
-class CustomerBinding extends Bindings {
+class UserBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(
-      () => CustomerController(
+      () => UserController(
+        userRepository: Get.find(),
         customerRepository: Get.find(),
         installmentRepository: Get.find(),
-        accessControlService: Get.find(),
       ),
     );
   }

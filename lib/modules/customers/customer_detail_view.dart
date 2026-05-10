@@ -4,9 +4,11 @@ import 'package:intl/intl.dart';
 
 import '../../app/bindings/installment_binding.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/constants/app_enums.dart';
 import '../../core/utils/currency_helper.dart';
 import '../../data/models/dashboard_models.dart';
 import '../../data/repositories/installment_repository.dart';
+import '../../services/session_manager.dart';
 import '../installments/installment_controller.dart';
 import '../installments/installment_plan_edit_view.dart';
 import '../installments/installment_plan_generator.dart';
@@ -23,6 +25,7 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
   final controller = Get.find<CustomerController>();
   final dateFormat = DateFormat('dd MMM yyyy');
   final installmentRepository = Get.find<InstallmentRepository>();
+  CustomerHistoryFilter selectedFilter = CustomerHistoryFilter.all;
 
   @override
   void initState() {
@@ -37,6 +40,8 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    final session = Get.find<SessionManager>();
+    final canManagePlans = session.role == UserRole.owner;
     return Scaffold(
       appBar: AppBar(title: Text('Customer Detail'.tr)),
       body: GetBuilder<CustomerController>(
@@ -46,6 +51,16 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
           }
           final profile = logic.profile!;
           final theme = Theme.of(context);
+          final filteredHistory = profile.history.where((item) {
+            switch (selectedFilter) {
+              case CustomerHistoryFilter.all:
+                return true;
+              case CustomerHistoryFilter.paid:
+                return item.status == CustomerHistoryStatus.paid;
+              case CustomerHistoryFilter.pending:
+                return item.status == CustomerHistoryStatus.pending;
+            }
+          }).toList();
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
@@ -56,6 +71,15 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                 leadingIcon: Icons.person_outline_rounded,
                 accentColor: AppColors.brandPrimary,
                 children: [
+                  _detailRow(
+                    context,
+                    icon: Icons.credit_card_outlined,
+                    label: 'Card / Reference Number'.tr,
+                    value: profile.customer.cardNumber.isEmpty
+                        ? 'Not provided'.tr
+                        : profile.customer.cardNumber,
+                  ),
+                  const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.call_outlined,
@@ -90,15 +114,18 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                     value: profile.customer.address,
                   ),
                   const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: () => _openPlanFlow(profile),
-                    icon: Icon(
-                      profile.plans.isEmpty ? Icons.add_card_rounded : Icons.edit_note_rounded,
+                  if (canManagePlans)
+                    FilledButton.icon(
+                      onPressed: () => _openPlanFlow(profile),
+                      icon: Icon(
+                        profile.plans.isEmpty
+                            ? Icons.add_card_rounded
+                            : Icons.edit_note_rounded,
+                      ),
+                      label: Text(
+                        (profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans').tr,
+                      ),
                     ),
-                    label: Text(
-                      (profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans').tr,
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -109,19 +136,74 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                 ),
               ),
               const SizedBox(height: 12),
-              ...profile.history.map(
-                (item) => Card(
-                  child: ListTile(
-                    title: Text(item.title),
-                    subtitle: Text('${item.subtitle}\n${dateFormat.format(item.date)}'),
-                    isThreeLine: true,
-                    trailing: Text(CurrencyHelper.pkr.format(item.amount)),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _filterChip(CustomerHistoryFilter.all, 'All'.tr),
+                  _filterChip(CustomerHistoryFilter.paid, 'Paid'.tr),
+                  _filterChip(CustomerHistoryFilter.pending, 'Pending'.tr),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (filteredHistory.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Text('No history found for this filter.'.tr),
+                  ),
+                )
+              else
+                ...filteredHistory.map(
+                  (item) => Card(
+                    child: ListTile(
+                      title: Text(item.title),
+                      subtitle: Text('${item.subtitle}\n${dateFormat.format(item.date)}'),
+                      isThreeLine: true,
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(CurrencyHelper.pkr.format(item.amount)),
+                          const SizedBox(height: 6),
+                          _historyStatusBadge(item.status),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _filterChip(CustomerHistoryFilter filter, String label) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selectedFilter == filter,
+      onSelected: (_) {
+        setState(() => selectedFilter = filter);
+      },
+    );
+  }
+
+  Widget _historyStatusBadge(CustomerHistoryStatus status) {
+    final isPaid = status == CustomerHistoryStatus.paid;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: (isPaid ? AppColors.success : AppColors.warning).withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        (isPaid ? 'Paid' : 'Pending').tr,
+        style: TextStyle(
+          color: isPaid ? AppColors.success : AppColors.warning,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -269,3 +351,5 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
     );
   }
 }
+
+enum CustomerHistoryFilter { all, paid, pending }

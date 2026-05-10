@@ -18,6 +18,13 @@ class GenericRepository<T extends BaseModel> {
   final FromMap<T> fromMap;
 
   Future<Database> get db async => _dbHelper.database;
+  Future<R> synchronizedWrite<R>(Future<R> Function(Database db) action) =>
+      _dbHelper.synchronizedWrite(action);
+  Future<R> synchronizedTransaction<R>(
+    Future<R> Function(Transaction txn) action, {
+    bool exclusive = false,
+  }) =>
+      _dbHelper.synchronizedTransaction(action, exclusive: exclusive);
 
   Future<int> insert(T item) async {
     final database = await db;

@@ -17,7 +17,7 @@ class BackgroundService {
   Timer? _timer;
 
   Future<void> start() async {
-    await _reportRepository.generateDailyReport(date: DateTime.now());
+    _timer?.cancel();
     _scheduleNextTick();
   }
 

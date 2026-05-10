@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -6,14 +7,18 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'db_constants.dart';
 import '../models/customer_model.dart';
+import '../models/customer_user_access_model.dart';
 import '../models/installment_model.dart';
+import '../models/local_user_model.dart';
 import '../models/payment_record_model.dart';
+import '../models/plan_user_access_model.dart';
 import '../models/product_model.dart';
 import '../models/product_price_history_model.dart';
 import '../models/purchase_plan_model.dart';
 
 class DbHelper {
   Database? _database;
+  Future<void> _writeQueue = Future<void>.value();
 
   Future<void> initialize() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -145,6 +150,16 @@ class DbHelper {
             WHERE TRIM(COALESCE(categories_text, '')) = '' OR categories_text = '[]'
           ''');
         }
+        if (oldVersion < 9) {
+          await db.execute(LocalUserModel.createTableQuery);
+          await db.execute(CustomerUserAccessModel.createTableQuery);
+          await db.execute(PlanUserAccessModel.createTableQuery);
+        }
+        if (oldVersion < 10) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.customers} ADD COLUMN card_number TEXT NOT NULL DEFAULT ''",
+          );
+        }
       },
     );
 
@@ -156,6 +171,9 @@ class DbHelper {
       CustomerModel.createTableQuery,
       ProductModel.createTableQuery,
       ProductPriceHistoryModel.createTableQuery,
+      LocalUserModel.createTableQuery,
+      CustomerUserAccessModel.createTableQuery,
+      PlanUserAccessModel.createTableQuery,
       PurchasePlanModel.createTableQuery,
       InstallmentModel.createTableQuery,
       PaymentRecordModel.createTableQuery,
@@ -163,6 +181,49 @@ class DbHelper {
 
     for (final query in createQueries) {
       await db.execute(query);
+    }
+  }
+
+  Future<T> synchronizedWrite<T>(Future<T> Function(Database db) action) {
+    final completer = Completer<T>();
+    _writeQueue = _writeQueue.catchError((_) {}).then((_) async {
+      try {
+        final instance = await database;
+        final result = await _runWithLockRetry(() => action(instance));
+        completer.complete(result);
+      } catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<T> synchronizedTransaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool exclusive = false,
+  }) {
+    return synchronizedWrite(
+      (db) => db.transaction(action, exclusive: exclusive),
+    );
+  }
+
+  Future<T> _runWithLockRetry<T>(
+    Future<T> Function() action, {
+    int maxAttempts = 4,
+  }) async {
+    var attempt = 0;
+    while (true) {
+      attempt += 1;
+      try {
+        return await action();
+      } catch (error) {
+        final isLocked = error is DatabaseException &&
+            error.toString().toLowerCase().contains('database is locked');
+        if (!isLocked || attempt >= maxAttempts) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 120 * attempt));
+      }
     }
   }
 }

@@ -83,7 +83,8 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
         whereArgs: [plan.id],
         orderBy: 'sequence_number ASC',
       );
-      installments.addAll(rows.map(InstallmentModel.fromMap));
+      final planInstallments = rows.map(InstallmentModel.fromMap).toList();
+      installments.addAll(planInstallments);
       history.add(
         CustomerHistoryEntry(
           title: 'Purchase created',
@@ -91,6 +92,7 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
           amount: plan.totalAmount,
           date: plan.createdAt,
           isCredit: false,
+          status: CustomerHistoryStatus.pending,
         ),
       );
       if (plan.depositAmount > 0) {
@@ -101,6 +103,23 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
             amount: plan.depositAmount,
             date: plan.createdAt,
             isCredit: true,
+            status: CustomerHistoryStatus.paid,
+          ),
+        );
+      }
+      for (final installment in planInstallments) {
+        if (installment.isPaid) {
+          continue;
+        }
+        history.add(
+          CustomerHistoryEntry(
+            title: 'Pending installment',
+            subtitle:
+                '${plan.itemName} • Installment #${installment.sequenceNumber}',
+            amount: installment.remainingAmount,
+            date: installment.currentDueDate,
+            isCredit: false,
+            status: CustomerHistoryStatus.pending,
           ),
         );
       }
@@ -114,6 +133,7 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
           amount: payment.amount,
           date: payment.paidOn,
           isCredit: true,
+          status: CustomerHistoryStatus.paid,
         ),
       );
     }

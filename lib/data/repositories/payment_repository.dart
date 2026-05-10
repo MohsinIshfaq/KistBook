@@ -22,8 +22,7 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
     required DateTime paidOn,
     required String note,
   }) async {
-    final db = await super.db;
-    await db.transaction((txn) async {
+    await synchronizedTransaction((txn) async {
       final installmentRows = await txn.query(
         DbConstants.installments,
         where: 'id = ?',

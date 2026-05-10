@@ -97,6 +97,7 @@ class CustomerHistoryEntry {
     required this.amount,
     required this.date,
     required this.isCredit,
+    required this.status,
   });
 
   final String title;
@@ -104,7 +105,10 @@ class CustomerHistoryEntry {
   final double amount;
   final DateTime date;
   final bool isCredit;
+  final CustomerHistoryStatus status;
 }
+
+enum CustomerHistoryStatus { paid, pending }
 
 class CustomerProfile {
   const CustomerProfile({

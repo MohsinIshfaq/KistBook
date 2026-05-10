@@ -211,6 +211,12 @@ class _SearchableSelectionPageState<T> extends State<_SearchableSelectionPage<T>
   }
 
   @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -438,6 +444,12 @@ class _SearchableSelectionSheet<T> extends StatefulWidget {
 class _SearchableSelectionSheetState<T>
     extends State<_SearchableSelectionSheet<T>> {
   final TextEditingController searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

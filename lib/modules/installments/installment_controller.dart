@@ -10,19 +10,23 @@ import '../../data/models/product_model.dart';
 import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../services/access_control_service.dart';
 
 class InstallmentController extends GetxController {
   InstallmentController({
     required InstallmentRepository installmentRepository,
     required CustomerRepository customerRepository,
     required ProductRepository productRepository,
+    required AccessControlService accessControlService,
   })  : _installmentRepository = installmentRepository,
         _customerRepository = customerRepository,
-        _productRepository = productRepository;
+        _productRepository = productRepository,
+        _accessControlService = accessControlService;
 
   final InstallmentRepository _installmentRepository;
   final CustomerRepository _customerRepository;
   final ProductRepository _productRepository;
+  final AccessControlService _accessControlService;
 
   List<DueInstallmentDetail> installments = [];
   List<CustomerModel> customers = [];
@@ -39,9 +43,13 @@ class InstallmentController extends GetxController {
   Future<void> loadData() async {
     isLoading = true;
     update();
-    customers = await _customerRepository.fetchCustomers();
+    customers = await _accessControlService.filterCustomers(
+      await _customerRepository.fetchCustomers(),
+    );
     products = await _productRepository.fetchProducts();
-    installments = await _installmentRepository.fetchActiveInstallments();
+    installments = await _accessControlService.filterDueInstallments(
+      await _installmentRepository.fetchActiveInstallments(),
+    );
     customerInsights = await _customerRepository.fetchCustomerPaymentInsights();
     isLoading = false;
     update();
