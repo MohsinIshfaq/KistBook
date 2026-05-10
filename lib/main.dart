@@ -26,7 +26,7 @@ Future<void> main() async {
 
 class KistBookApp extends StatelessWidget {
   const KistBookApp({super.key});
-
+  // Homage eSmart Crystal 1.5 Ton Inverter AC HES-1812E
   @override
   Widget build(BuildContext context) {
     return GetBuilder<SettingsController>(

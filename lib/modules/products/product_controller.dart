@@ -13,7 +13,51 @@ class ProductController extends GetxController {
   List<ProductModel> products = [];
   ProductModel? product;
   List<ProductPriceHistoryModel> priceHistory = [];
+  List<String> selectedCategories = [];
+  String searchQuery = '';
   bool isLoading = false;
+
+  List<String> get categories {
+    final values = products
+        .expand((item) => item.categories)
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return values;
+  }
+
+  List<ProductModel> get filteredProducts {
+    final normalizedCategories = selectedCategories
+        .map((item) => item.trim().toLowerCase())
+        .where((item) => item.isNotEmpty)
+        .toSet();
+    final normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return products.where((product) {
+      final productCategories = product.categories
+          .map((item) => item.trim().toLowerCase())
+          .where((item) => item.isNotEmpty)
+          .toSet();
+      final categoryMatches = normalizedCategories.isEmpty ||
+          productCategories.any(normalizedCategories.contains);
+      if (!categoryMatches) {
+        return false;
+      }
+
+      if (normalizedQuery.isEmpty) {
+        return true;
+      }
+
+      final haystack = [
+        product.name,
+        product.brandName,
+        product.sku,
+      ].join(' ').toLowerCase();
+      return haystack.contains(normalizedQuery);
+    }).toList();
+  }
 
   @override
   void onInit() {
@@ -26,6 +70,26 @@ class ProductController extends GetxController {
     update();
     products = await _productRepository.fetchProducts();
     isLoading = false;
+    update();
+  }
+
+  void toggleCategory(String category) {
+    if (selectedCategories.contains(category)) {
+      selectedCategories.remove(category);
+    } else {
+      selectedCategories.add(category);
+    }
+    update();
+  }
+
+  void setSearchQuery(String value) {
+    searchQuery = value;
+    update();
+  }
+
+  void clearFilters() {
+    selectedCategories = [];
+    searchQuery = '';
     update();
   }
 

@@ -1,6 +1,6 @@
 class DbConstants {
   static const databaseName = 'kistbook.db';
-  static const databaseVersion = 6;
+  static const databaseVersion = 8;
 
   static const customers = 'customers';
   static const products = 'products';

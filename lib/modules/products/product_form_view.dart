@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../app/theme/app_colors.dart';
 import '../../core/utils/text_helper.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/app_text_field.dart';
@@ -16,11 +17,13 @@ class ProductFormView extends StatefulWidget {
 
 class _ProductFormViewState extends State<ProductFormView> {
   final controller = Get.find<ProductController>();
+  final categoryController = TextEditingController();
   final brandController = TextEditingController();
   final nameController = TextEditingController();
   final skuController = TextEditingController();
   final priceController = TextEditingController();
   final notesController = TextEditingController();
+  final List<String> selectedCategories = [];
   ProductModel? existing;
 
   @override
@@ -29,12 +32,41 @@ class _ProductFormViewState extends State<ProductFormView> {
     final arg = Get.arguments;
     if (arg is ProductModel) {
       existing = arg;
+      selectedCategories
+        ..clear()
+        ..addAll(arg.categories);
       brandController.text = arg.brandName;
       nameController.text = arg.name;
       skuController.text = arg.sku;
       priceController.text = arg.salePrice.toStringAsFixed(0);
       notesController.text = arg.notes;
     }
+  }
+
+  void _addCategory() {
+    final normalized = TextHelper.toTitleCase(categoryController.text);
+    if (normalized.isEmpty) {
+      return;
+    }
+    if (selectedCategories.contains(normalized)) {
+      categoryController.clear();
+      return;
+    }
+    setState(() {
+      selectedCategories.add(normalized);
+      categoryController.clear();
+    });
+  }
+
+  @override
+  void dispose() {
+    categoryController.dispose();
+    brandController.dispose();
+    nameController.dispose();
+    skuController.dispose();
+    priceController.dispose();
+    notesController.dispose();
+    super.dispose();
   }
 
   @override
@@ -46,6 +78,76 @@ class _ProductFormViewState extends State<ProductFormView> {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Categories'.tr,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : AppColors.inkStrong,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: categoryController,
+                        textCapitalization: TextCapitalization.words,
+                        onSubmitted: (_) => _addCategory(),
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppColors.inkStrong,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter category and add'.tr,
+                          prefixIcon: const Icon(Icons.category_outlined, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: FilledButton.icon(
+                        onPressed: _addCategory,
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text('Add'.tr),
+                      ),
+                    ),
+                  ],
+                ),
+                if (selectedCategories.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: selectedCategories.map((category) {
+                      return Chip(
+                        label: Text(category),
+                        onDeleted: () {
+                          setState(() => selectedCategories.remove(category));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
           AppTextField(
             label: 'Brand name'.tr,
             hint: 'Enter brand name'.tr,
@@ -83,6 +185,7 @@ class _ProductFormViewState extends State<ProductFormView> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: () async {
+              _addCategory();
               final brandName = TextHelper.toTitleCase(brandController.text);
               final productName = TextHelper.toTitleCase(nameController.text);
               final sku = skuController.text.trim();
@@ -92,6 +195,12 @@ class _ProductFormViewState extends State<ProductFormView> {
 
               if (brandName.isEmpty) {
                 errors.add('Brand name is required.'.tr);
+              }
+              if (selectedCategories.isEmpty) {
+                errors.add('At least one category is required.'.tr);
+              }
+              if (selectedCategories.any((item) => item.trim().length < 2)) {
+                errors.add('Each category should be at least 2 characters.'.tr);
               }
               if (productName.isEmpty) {
                 errors.add('Product name is required.'.tr);
@@ -128,6 +237,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               await controller.saveProduct(
                 ProductModel(
                   id: existing?.id,
+                  categories: List<String>.from(selectedCategories),
                   brandName: brandName,
                   name: productName,
                   sku: sku,

@@ -35,6 +35,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
       final now = DateTime.now();
       final productToSave = ProductModel(
         id: product.id,
+        categories: product.categories,
         brandName: product.brandName,
         name: product.name,
         sku: product.sku,
@@ -83,6 +84,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
 
       return ProductModel(
         id: productId,
+        categories: productToSave.categories,
         brandName: productToSave.brandName,
         name: productToSave.name,
         sku: productToSave.sku,

@@ -122,6 +122,29 @@ class DbHelper {
             END
           ''');
         }
+        if (oldVersion < 7) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.products} ADD COLUMN category TEXT NOT NULL DEFAULT '${ProductModel.defaultCategory}'",
+          );
+          await db.execute('''
+            UPDATE ${DbConstants.products}
+            SET category = '${ProductModel.defaultCategory}'
+            WHERE TRIM(COALESCE(category, '')) = ''
+          ''');
+        }
+        if (oldVersion < 8) {
+          await db.execute(
+            "ALTER TABLE ${DbConstants.products} ADD COLUMN categories_text TEXT NOT NULL DEFAULT '[]'",
+          );
+          await db.execute('''
+            UPDATE ${DbConstants.products}
+            SET categories_text = CASE
+              WHEN TRIM(COALESCE(category, '')) = '' THEN '["${ProductModel.defaultCategory}"]'
+              ELSE '["' || REPLACE(TRIM(category), '"', '') || '"]'
+            END
+            WHERE TRIM(COALESCE(categories_text, '')) = '' OR categories_text = '[]'
+          ''');
+        }
       },
     );
 

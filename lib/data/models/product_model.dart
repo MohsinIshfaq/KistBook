@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'base_model.dart';
 
 class ProductModel implements BaseModel {
+  static const defaultCategory = 'General';
+
   static String get createTableQuery => '''
     CREATE TABLE products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      categories_text TEXT NOT NULL,
       brand_name TEXT NOT NULL,
       name TEXT NOT NULL,
       sku TEXT NOT NULL,
@@ -16,6 +21,7 @@ class ProductModel implements BaseModel {
 
   const ProductModel({
     this.id,
+    required this.categories,
     required this.brandName,
     required this.name,
     required this.sku,
@@ -27,6 +33,7 @@ class ProductModel implements BaseModel {
 
   @override
   final int? id;
+  final List<String> categories;
   final String brandName;
   final String name;
   final String sku;
@@ -38,6 +45,7 @@ class ProductModel implements BaseModel {
   @override
   Map<String, Object?> toMap() => {
         'id': id,
+        'categories_text': jsonEncode(categories),
         'brand_name': brandName,
         'name': name,
         'sku': sku,
@@ -55,6 +63,10 @@ class ProductModel implements BaseModel {
 
   factory ProductModel.fromMap(Map<String, Object?> map) => ProductModel(
         id: map['id'] as int?,
+        categories: _parseCategories(
+          map['categories_text'] as String?,
+          fallbackCategory: map['category'] as String?,
+        ),
         brandName: map['brand_name'] as String? ?? '',
         name: map['name'] as String? ?? '',
         sku: map['sku'] as String? ?? '',
@@ -65,4 +77,27 @@ class ProductModel implements BaseModel {
           (map['updated_at'] as String?) ?? (map['created_at'] as String),
         ),
       );
+
+  static List<String> _parseCategories(String? raw, {String? fallbackCategory}) {
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final values = decoded
+              .whereType<String>()
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList();
+          if (values.isNotEmpty) {
+            return values;
+          }
+        }
+      } catch (_) {
+        // Fall back to legacy parsing below.
+      }
+    }
+
+    final fallback = (fallbackCategory ?? '').trim();
+    return fallback.isEmpty ? const [defaultCategory] : [fallback];
+  }
 }

@@ -49,6 +49,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 leadingIcon: Icons.inventory_2_outlined,
                 accentColor: AppColors.brandAccent,
                 children: [
+                  _categorySection(
+                    context,
+                    categories: product.categories,
+                  ),
+                  const SizedBox(height: 14),
                   _detailRow(
                     context,
                     icon: Icons.business_outlined,
@@ -167,6 +172,72 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           );
         },
       ),
+    );
+  }
+
+  Widget _categorySection(
+    BuildContext context, {
+    required List<String> categories,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: theme.brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.surfaceTint,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.category_outlined,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Categories'.tr,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: categories
+                    .map(
+                      (category) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(
+                            alpha: theme.brightness == Brightness.dark ? 0.18 : 0.10,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          category,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.info,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
