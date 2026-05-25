@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::apiResource('customers', CustomerController::class)->parameter('customers', 'uuid');
     Route::apiResource('products', ProductController::class)->parameter('products', 'uuid');
+    Route::post('products/{uuid}', [ProductController::class, 'update']);
     Route::apiResource('categories', CategoryController::class)->parameter('categories', 'uuid');
     Route::apiResource('plans', PlanController::class)->parameter('plans', 'uuid');
     Route::apiResource('installments', InstallmentController::class)->parameter('installments', 'uuid');

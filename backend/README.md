@@ -12,7 +12,7 @@ Laravel 13 API backend for installment, customer, product, payment, and sync-rea
 
 ## Stack
 
-- PHP 8.5
+- PHP 8.3+
 - Laravel 13
 - MySQL
 - Laravel Sanctum
@@ -67,6 +67,12 @@ Run migrations:
 /opt/homebrew/bin/php artisan migrate
 ```
 
+Create the public storage symlink for product image URLs:
+
+```bash
+/opt/homebrew/bin/php artisan storage:link
+```
+
 Seed demo data:
 
 ```bash
@@ -115,6 +121,7 @@ Run tests:
 - `GET|PUT|PATCH|DELETE /api/customers/{uuid}`
 - `GET|POST /api/products`
 - `GET|PUT|PATCH|DELETE /api/products/{uuid}`
+- `POST /api/products/{uuid}` multipart update alias for product image uploads
 - `GET|POST /api/categories`
 - `GET|PUT|PATCH|DELETE /api/categories/{uuid}`
 - `GET|POST /api/plans`
@@ -199,6 +206,42 @@ curl -X POST http://127.0.0.1:8000/api/plans \
     "status": "active"
   }'
 ```
+
+Create product with images:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/products \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "brand_name=Oppo" \
+  -F "product_name=Reno 13" \
+  -F "code=REN-13" \
+  -F "sales_price=118000" \
+  -F "category_uuids[]=CATEGORY_UUID" \
+  -F "images[]=@/absolute/path/front.jpg" \
+  -F "images[]=@/absolute/path/back.jpg"
+```
+
+Update product images:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/products/PRODUCT_UUID \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "product_name=Reno 13 Pro" \
+  -F "image_uuids[]=EXISTING_IMAGE_UUID_TO_KEEP_FIRST" \
+  -F "remove_image_uuids[]=IMAGE_UUID_TO_REMOVE" \
+  -F "images[]=@/absolute/path/new-angle.jpg"
+```
+
+Product image rules:
+
+- `images[]` is optional, max 12 files per request.
+- Supported image types: `jpg`, `jpeg`, `png`, `webp`, `heic`.
+- Max image size: 5 MB each.
+- The first image by `sort_order` is returned as `primary_image`.
+- Send `image_uuids[]` on update to keep and reorder existing images.
+- Send `remove_image_uuids[]` on update to remove specific existing images.
 
 Create payment:
 

@@ -21,6 +21,8 @@ class StoreProductRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             'category_uuids' => ['nullable', 'array'],
             'category_uuids.*' => ['uuid', 'exists:product_categories,uuid'],
+            'images' => ['nullable', 'array', 'max:12'],
+            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp,heic', 'max:5120'],
         ];
     }
 }

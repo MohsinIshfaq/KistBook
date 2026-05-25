@@ -17,6 +17,11 @@ class ProductResource extends JsonResource
             'sales_price' => (float) $this->sales_price,
             'notes' => $this->notes,
             'categories' => ProductCategoryResource::collection($this->whenLoaded('categories')),
+            'images' => ProductImageResource::collection($this->whenLoaded('images')),
+            'primary_image' => $this->whenLoaded(
+                'images',
+                fn () => $this->images->isEmpty() ? null : new ProductImageResource($this->images->first())
+            ),
             'plans' => PlanResource::collection($this->whenLoaded('plans')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

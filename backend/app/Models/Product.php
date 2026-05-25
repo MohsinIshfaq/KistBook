@@ -45,4 +45,11 @@ class Product extends Model
         return $this->belongsToMany(ProductCategory::class, 'product_category_map', 'product_uuid', 'category_uuid', 'uuid', 'uuid')
             ->withTimestamps();
     }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class, 'product_uuid', 'uuid')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
 }
