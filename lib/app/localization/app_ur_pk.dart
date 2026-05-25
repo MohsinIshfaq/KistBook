@@ -113,8 +113,7 @@ const Map<String, String> appUrPk = {
   'Collected amount': 'وصول شدہ رقم',
   'Outstanding amount': 'بقایا رقم',
   'Recent Plans': 'حالیہ پلان',
-  'Installment @amount • Every @days days':
-      'قسط @amount • ہر @days دن بعد',
+  'Installment @amount • Every @days days': 'قسط @amount • ہر @days دن بعد',
   'New': 'نیا',
   'Excellent': 'بہترین',
   'Good': 'اچھا',
@@ -132,6 +131,20 @@ const Map<String, String> appUrPk = {
   'Sale price': 'فروخت قیمت',
   'Notes': 'نوٹس',
   'Optional product notes': 'اختیاری پروڈکٹ نوٹس',
+  'Product Images': 'پروڈکٹ تصاویر',
+  'Add Product Images': 'پروڈکٹ تصاویر شامل کریں',
+  'Choose from Gallery': 'گیلری سے منتخب کریں',
+  'Select multiple product images': 'متعدد پروڈکٹ تصاویر منتخب کریں',
+  'Take Photo': 'تصویر بنائیں',
+  'Capture a product image': 'پروڈکٹ کی تصویر بنائیں',
+  'Remove Image?': 'تصویر ہٹائیں؟',
+  'Are you sure you want to remove this product image?':
+      'کیا آپ واقعی یہ پروڈکٹ تصویر ہٹانا چاہتے ہیں؟',
+  'Remove': 'ہٹائیں',
+  'Image Selection Failed': 'تصویر منتخب نہیں ہو سکی',
+  'Unable to add product images. Please try again.':
+      'پروڈکٹ تصاویر شامل نہیں ہو سکیں۔ براہ کرم دوبارہ کوشش کریں۔',
+  'Close': 'بند کریں',
   'Brand name is required.': 'برانڈ کا نام لازمی ہے۔',
   'Product name is required.': 'پروڈکٹ کا نام لازمی ہے۔',
   'Price must be greater than zero.': 'قیمت صفر سے زیادہ ہونی چاہیے۔',
@@ -189,7 +202,8 @@ const Map<String, String> appUrPk = {
   'Daily Installment': 'روزانہ قسط',
   '@count kist due': '@count قسط واجب الادا',
   'Yes': 'جی ہاں',
-  '@name installment moved to @date.': '@name کی قسط @date پر منتقل کر دی گئی ہے۔',
+  '@name installment moved to @date.':
+      '@name کی قسط @date پر منتقل کر دی گئی ہے۔',
   'Single Day Collection': 'ایک دن کی وصولی',
   'Selected date ke customers, product name, installment amount aur collection action yahan show hotay hain.':
       'منتخب تاریخ کے کسٹمرز، پروڈکٹ نام، قسطی رقم اور وصولی ایکشن یہاں دکھائے جاتے ہیں۔',
@@ -197,7 +211,8 @@ const Map<String, String> appUrPk = {
   'Selected date': 'منتخب تاریخ',
   'Customers due': 'واجب الادا کسٹمرز',
   'Total collectible': 'کل قابل وصول',
-  'Is date par koi kist due nahi mili.': 'اس تاریخ پر کوئی قسط واجب الادا نہیں ملی۔',
+  'Is date par koi kist due nahi mili.':
+      'اس تاریخ پر کوئی قسط واجب الادا نہیں ملی۔',
   'Collect Installment': 'قسط وصول کریں',
   'Enter amount': 'رقم درج کریں',
   'Cancel': 'منسوخ کریں',

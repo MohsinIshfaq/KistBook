@@ -133,6 +133,20 @@ const Map<String, String> appEnUs = {
   'Sale price': 'Sale price',
   'Notes': 'Notes',
   'Optional product notes': 'Optional product notes',
+  'Product Images': 'Product Images',
+  'Add Product Images': 'Add Product Images',
+  'Choose from Gallery': 'Choose from Gallery',
+  'Select multiple product images': 'Select multiple product images',
+  'Take Photo': 'Take Photo',
+  'Capture a product image': 'Capture a product image',
+  'Remove Image?': 'Remove Image?',
+  'Are you sure you want to remove this product image?':
+      'Are you sure you want to remove this product image?',
+  'Remove': 'Remove',
+  'Image Selection Failed': 'Image Selection Failed',
+  'Unable to add product images. Please try again.':
+      'Unable to add product images. Please try again.',
+  'Close': 'Close',
   'Brand name is required.': 'Brand name is required.',
   'Product name is required.': 'Product name is required.',
   'Price must be greater than zero.': 'Price must be greater than zero.',
@@ -198,7 +212,8 @@ const Map<String, String> appEnUs = {
   'Selected date': 'Selected date',
   'Customers due': 'Customers due',
   'Total collectible': 'Total collectible',
-  'Is date par koi kist due nahi mili.': 'No installments are due on this date.',
+  'Is date par koi kist due nahi mili.':
+      'No installments are due on this date.',
   'Collect Installment': 'Collect Installment',
   'Enter amount': 'Enter amount',
   'Cancel': 'Cancel',
@@ -210,8 +225,7 @@ const Map<String, String> appEnUs = {
   '@name se @amount receive mark kar di gayi hai.':
       '@amount has been recorded as collected from @name.',
   'Notice': 'Notice',
-  'Daily due report generated at @path':
-      'Daily due report generated at @path',
+  'Daily due report generated at @path': 'Daily due report generated at @path',
   'Please review the detail below.': 'Please review the detail below.',
   'Please review the following @count items.':
       'Please review the following @count items.',

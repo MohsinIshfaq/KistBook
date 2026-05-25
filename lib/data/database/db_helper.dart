@@ -12,6 +12,7 @@ import '../models/installment_model.dart';
 import '../models/local_user_model.dart';
 import '../models/payment_record_model.dart';
 import '../models/plan_user_access_model.dart';
+import '../models/product_image_model.dart';
 import '../models/product_model.dart';
 import '../models/product_price_history_model.dart';
 import '../models/purchase_plan_model.dart';
@@ -36,7 +37,6 @@ class DbHelper {
     final directory = await getApplicationDocumentsDirectory();
     final path = p.join(directory.path, DbConstants.databaseName);
 
-    print("** path: $path");
     _database = await openDatabase(
       path,
       version: DbConstants.databaseVersion,
@@ -160,6 +160,10 @@ class DbHelper {
             "ALTER TABLE ${DbConstants.customers} ADD COLUMN card_number TEXT NOT NULL DEFAULT ''",
           );
         }
+        if (oldVersion < 11) {
+          await db.execute(ProductImageModel.createTableQuery);
+          await db.execute(ProductImageModel.createProductIndexQuery);
+        }
       },
     );
 
@@ -170,6 +174,8 @@ class DbHelper {
     final createQueries = [
       CustomerModel.createTableQuery,
       ProductModel.createTableQuery,
+      ProductImageModel.createTableQuery,
+      ProductImageModel.createProductIndexQuery,
       ProductPriceHistoryModel.createTableQuery,
       LocalUserModel.createTableQuery,
       CustomerUserAccessModel.createTableQuery,
@@ -217,7 +223,8 @@ class DbHelper {
       try {
         return await action();
       } catch (error) {
-        final isLocked = error is DatabaseException &&
+        final isLocked =
+            error is DatabaseException &&
             error.toString().toLowerCase().contains('database is locked');
         if (!isLocked || attempt >= maxAttempts) {
           rethrow;
