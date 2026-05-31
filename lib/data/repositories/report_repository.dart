@@ -21,22 +21,36 @@ class ReportRepository {
 
   Future<Database> get _db async => _dbHelper.database;
 
-  Future<List<DueInstallmentDetail>> fetchDueInstallments({DateTime? date}) async {
+  Future<List<DueInstallmentDetail>> fetchDueInstallments({
+    DateTime? date,
+  }) async {
     final db = await _db;
     final targetDate = DateHelper.startOfDay(date ?? DateTime.now());
-    final customerRows = await db.query(DbConstants.customers);
-    final productRows = await db.query(DbConstants.products);
-    final planRows = await db.query(DbConstants.plans);
-    final installmentRows = await db.query(DbConstants.installments);
+    final customerRows = await db.query(
+      DbConstants.customers,
+      where: 'is_deleted = 0',
+    );
+    final productRows = await db.query(
+      DbConstants.products,
+      where: 'is_deleted = 0',
+    );
+    final planRows = await db.query(DbConstants.plans, where: 'is_deleted = 0');
+    final installmentRows = await db.query(
+      DbConstants.installments,
+      where: 'is_deleted = 0',
+    );
 
     final customers = {
-      for (final row in customerRows) (row['id'] as int): CustomerModel.fromMap(row),
+      for (final row in customerRows)
+        (row['id'] as int): CustomerModel.fromMap(row),
     };
     final products = {
-      for (final row in productRows) (row['id'] as int): ProductModel.fromMap(row),
+      for (final row in productRows)
+        (row['id'] as int): ProductModel.fromMap(row),
     };
     final plans = {
-      for (final row in planRows) (row['id'] as int): PurchasePlanModel.fromMap(row),
+      for (final row in planRows)
+        (row['id'] as int): PurchasePlanModel.fromMap(row),
     };
 
     final dueItems = <DueInstallmentDetail>[];
@@ -56,7 +70,9 @@ class ReportRepository {
           customer: customer,
           plan: plan,
           installment: installment,
-          product: plan.primaryProductId == null ? null : products[plan.primaryProductId!],
+          product: plan.primaryProductId == null
+              ? null
+              : products[plan.primaryProductId!],
         ),
       );
     }

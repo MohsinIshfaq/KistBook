@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_helper.dart';
+import '../database/sync_metadata.dart';
 import '../models/base_model.dart';
 import 'sql_expression.dart';
 
@@ -28,14 +29,17 @@ class GenericRepository<T extends BaseModel> {
 
   Future<int> insert(T item) async {
     final database = await db;
-    return database.insert(tableName, item.toMap()..remove('id'));
+    return database.insert(
+      tableName,
+      SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
+    );
   }
 
   Future<int> update(T item) async {
     final database = await db;
     return database.update(
       tableName,
-      item.toMap()..remove('id'),
+      SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
       where: 'id = ?',
       whereArgs: [item.id],
     );
@@ -62,7 +66,7 @@ class GenericRepository<T extends BaseModel> {
     if (value == null) {
       await database.insert(
         tableName,
-        item.toMap()..remove('id'),
+        SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       return;
@@ -70,7 +74,7 @@ class GenericRepository<T extends BaseModel> {
 
     final updated = await database.update(
       tableName,
-      item.toMap()..remove('id'),
+      SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
       where: '$key = ?',
       whereArgs: [value],
     );
@@ -78,7 +82,7 @@ class GenericRepository<T extends BaseModel> {
     if (updated == 0) {
       await database.insert(
         tableName,
-        item.toMap()..remove('id'),
+        SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
@@ -97,7 +101,7 @@ class GenericRepository<T extends BaseModel> {
         if (value == null) {
           batch.insert(
             tableName,
-            item.toMap()..remove('id'),
+            SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
           continue;
@@ -105,7 +109,7 @@ class GenericRepository<T extends BaseModel> {
 
         batch.insert(
           tableName,
-          item.toMap()..remove('id'),
+          SyncMetadata.withLocalChange(tableName, item.toMap()..remove('id')),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -115,6 +119,14 @@ class GenericRepository<T extends BaseModel> {
 
   Future<int> delete(int id) async {
     final database = await db;
+    if (SyncMetadata.isSyncableTable(tableName)) {
+      return database.update(
+        tableName,
+        SyncMetadata.withLocalChange(tableName, {'is_deleted': 1}),
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
     return database.delete(tableName, where: 'id = ?', whereArgs: [id]);
   }
 
@@ -125,6 +137,14 @@ class GenericRepository<T extends BaseModel> {
 
     final database = await db;
     final placeholders = List.filled(ids.length, '?').join(',');
+    if (SyncMetadata.isSyncableTable(tableName)) {
+      return database.update(
+        tableName,
+        SyncMetadata.withLocalChange(tableName, {'is_deleted': 1}),
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    }
     return database.delete(
       tableName,
       where: 'id IN ($placeholders)',
@@ -134,6 +154,15 @@ class GenericRepository<T extends BaseModel> {
 
   Future<void> deleteByExpression({required SQLExpression where}) async {
     final database = await db;
+    if (SyncMetadata.isSyncableTable(tableName)) {
+      await database.update(
+        tableName,
+        SyncMetadata.withLocalChange(tableName, {'is_deleted': 1}),
+        where: where.buildQuery(),
+        whereArgs: where.values,
+      );
+      return;
+    }
     await database.delete(
       tableName,
       where: where.buildQuery(),
@@ -143,15 +172,22 @@ class GenericRepository<T extends BaseModel> {
 
   Future<List<T>> getAll({String? orderBy}) async {
     final database = await db;
-    final rows = await database.query(tableName, orderBy: orderBy);
+    final rows = await database.query(
+      tableName,
+      where: SyncMetadata.isSyncableTable(tableName) ? 'is_deleted = 0' : null,
+      orderBy: orderBy,
+    );
     return rows.map(fromMap).toList();
   }
 
   Future<List<T>> findAllWhere(String key, Object? value, {String? orderBy}) async {
     final database = await db;
+    final where = SyncMetadata.isSyncableTable(tableName)
+        ? '$key = ? AND is_deleted = 0'
+        : '$key = ?';
     final rows = await database.query(
       tableName,
-      where: '$key = ?',
+      where: where,
       whereArgs: [value],
       orderBy: orderBy,
     );
@@ -164,9 +200,13 @@ class GenericRepository<T extends BaseModel> {
     String? orderBy,
   }) async {
     final database = await db;
+    final query = where.buildQuery();
+    final effectiveWhere = SyncMetadata.isSyncableTable(tableName)
+        ? '($query) AND is_deleted = 0'
+        : query;
     final rows = await database.query(
       tableName,
-      where: where.buildQuery(),
+      where: effectiveWhere,
       whereArgs: where.values,
       limit: limit,
       orderBy: orderBy,
@@ -183,7 +223,9 @@ class GenericRepository<T extends BaseModel> {
     final database = await db;
     final rows = await database.query(
       tableName,
-      where: 'id = ?',
+      where: SyncMetadata.isSyncableTable(tableName)
+          ? 'id = ? AND is_deleted = 0'
+          : 'id = ?',
       whereArgs: [id],
       limit: 1,
     );
@@ -194,7 +236,9 @@ class GenericRepository<T extends BaseModel> {
     final database = await db;
     final rows = await database.query(
       tableName,
-      where: '$key = ?',
+      where: SyncMetadata.isSyncableTable(tableName)
+          ? '$key = ? AND is_deleted = 0'
+          : '$key = ?',
       whereArgs: [value],
       limit: 1,
     );

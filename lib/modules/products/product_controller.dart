@@ -3,10 +3,11 @@ import 'package:get/get.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/product_price_history_model.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../services/background_service.dart';
 
 class ProductController extends GetxController {
   ProductController({required ProductRepository productRepository})
-      : _productRepository = productRepository;
+    : _productRepository = productRepository;
 
   final ProductRepository _productRepository;
 
@@ -18,13 +19,14 @@ class ProductController extends GetxController {
   bool isLoading = false;
 
   List<String> get categories {
-    final values = products
-        .expand((item) => item.categories)
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final values =
+        products
+            .expand((item) => item.categories)
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     return values;
   }
 
@@ -40,7 +42,8 @@ class ProductController extends GetxController {
           .map((item) => item.trim().toLowerCase())
           .where((item) => item.isNotEmpty)
           .toSet();
-      final categoryMatches = normalizedCategories.isEmpty ||
+      final categoryMatches =
+          normalizedCategories.isEmpty ||
           productCategories.any(normalizedCategories.contains);
       if (!categoryMatches) {
         return false;
@@ -95,11 +98,13 @@ class ProductController extends GetxController {
 
   Future<void> saveProduct(ProductModel product) async {
     await _productRepository.saveProduct(product);
+    _requestSync();
     await loadProducts();
   }
 
   Future<void> deleteProduct(int productId) async {
     await _productRepository.deleteProduct(productId);
+    _requestSync();
     await loadProducts();
   }
 
@@ -110,5 +115,11 @@ class ProductController extends GetxController {
     priceHistory = await _productRepository.fetchPriceHistory(productId);
     isLoading = false;
     update();
+  }
+
+  void _requestSync() {
+    if (Get.isRegistered<BackgroundService>()) {
+      Get.find<BackgroundService>().requestSync();
+    }
   }
 }

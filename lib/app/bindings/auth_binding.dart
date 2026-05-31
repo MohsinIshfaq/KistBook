@@ -9,6 +9,7 @@ class AuthBinding extends Bindings {
       () => AuthController(
         userRepository: Get.find(),
         sessionManager: Get.find(),
+        authApiService: Get.find(),
       ),
     );
   }

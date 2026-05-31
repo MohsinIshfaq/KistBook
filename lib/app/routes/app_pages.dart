@@ -9,6 +9,7 @@ import '../../modules/dashboard/dashboard_view.dart';
 import '../../modules/installments/daily_installment_collection_view.dart';
 import '../../modules/installments/installment_schedule_view.dart';
 import '../../modules/auth/login_view.dart';
+import '../../modules/auth/owner_signup_view.dart';
 import '../../modules/payments/payment_form_view.dart';
 import '../../modules/payments/payment_history_view.dart';
 import '../../modules/products/product_detail_view.dart';
@@ -34,6 +35,12 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginView(),
+      binding: AuthBinding(),
+      middlewares: [AuthMiddleware(publicOnly: true)],
+    ),
+    GetPage(
+      name: AppRoutes.ownerSignup,
+      page: () => const OwnerSignupView(),
       binding: AuthBinding(),
       middlewares: [AuthMiddleware(publicOnly: true)],
     ),

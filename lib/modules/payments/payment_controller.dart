@@ -5,15 +5,16 @@ import '../../data/models/payment_record_model.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/payment_repository.dart';
 import '../../services/access_control_service.dart';
+import '../../services/background_service.dart';
 
 class PaymentController extends GetxController {
   PaymentController({
     required PaymentRepository paymentRepository,
     required InstallmentRepository installmentRepository,
     required AccessControlService accessControlService,
-  })  : _paymentRepository = paymentRepository,
-        _installmentRepository = installmentRepository,
-        _accessControlService = accessControlService;
+  }) : _paymentRepository = paymentRepository,
+       _installmentRepository = installmentRepository,
+       _accessControlService = accessControlService;
 
   final PaymentRepository _paymentRepository;
   final InstallmentRepository _installmentRepository;
@@ -61,10 +62,17 @@ class PaymentController extends GetxController {
         paidOn: paidOn,
         note: note,
       );
+      _requestSync();
       await loadData();
     } finally {
       isSubmittingPayment = false;
       update();
+    }
+  }
+
+  void _requestSync() {
+    if (Get.isRegistered<BackgroundService>()) {
+      Get.find<BackgroundService>().requestSync();
     }
   }
 }

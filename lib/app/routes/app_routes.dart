@@ -1,5 +1,6 @@
 abstract class AppRoutes {
   static const login = '/login';
+  static const ownerSignup = '/owner-signup';
   static const dashboard = '/dashboard';
   static const users = '/users';
   static const userForm = '/users/form';

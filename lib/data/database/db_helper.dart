@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'db_constants.dart';
+import 'sync_metadata.dart';
 import '../models/customer_model.dart';
 import '../models/customer_user_access_model.dart';
 import '../models/installment_model.dart';
@@ -164,6 +165,9 @@ class DbHelper {
           await db.execute(ProductImageModel.createTableQuery);
           await db.execute(ProductImageModel.createProductIndexQuery);
         }
+        if (oldVersion < 12) {
+          await _ensureSyncMetadata(db);
+        }
       },
     );
 
@@ -188,6 +192,72 @@ class DbHelper {
     for (final query in createQueries) {
       await db.execute(query);
     }
+    await _ensureSyncMetadata(db);
+  }
+
+  Future<void> _ensureSyncMetadata(Database db) async {
+    for (final tableName in SyncMetadata.syncableTables) {
+      final exists = await _tableExists(db, tableName);
+      if (!exists) {
+        continue;
+      }
+
+      await _addColumnIfMissing(db, tableName, 'server_id TEXT');
+      await _addColumnIfMissing(
+        db,
+        tableName,
+        "created_at TEXT NOT NULL DEFAULT ''",
+      );
+      await _addColumnIfMissing(
+        db,
+        tableName,
+        "date_updated TEXT NOT NULL DEFAULT ''",
+      );
+      await _addColumnIfMissing(
+        db,
+        tableName,
+        'is_sync INTEGER NOT NULL DEFAULT 0',
+      );
+      await _addColumnIfMissing(
+        db,
+        tableName,
+        'is_deleted INTEGER NOT NULL DEFAULT 0',
+      );
+      await _addColumnIfMissing(
+        db,
+        tableName,
+        "updated_at TEXT NOT NULL DEFAULT ''",
+      );
+
+      final now = DateTime.now().toUtc().toIso8601String();
+      await db.update(tableName, {
+        'created_at': now,
+        'date_updated': now,
+        'updated_at': now,
+      }, where: "TRIM(COALESCE(date_updated, '')) = ''");
+    }
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      [tableName],
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String tableName,
+    String definition,
+  ) async {
+    final columnName = definition.split(' ').first;
+    final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+    final exists = columns.any((column) => column['name'] == columnName);
+    if (exists) {
+      return;
+    }
+    await db.execute('ALTER TABLE $tableName ADD COLUMN $definition');
   }
 
   Future<T> synchronizedWrite<T>(Future<T> Function(Database db) action) {

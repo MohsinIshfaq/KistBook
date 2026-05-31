@@ -21,26 +21,31 @@ class DashboardRepository {
     final effectiveToday = DateHelper.startOfDay(today ?? DateTime.now());
     await installmentRepository.reconcileInstallments(today: effectiveToday);
 
-    final customers =
-        (await db.query(DbConstants.customers, orderBy: 'created_at DESC'))
-            .map(CustomerModel.fromMap)
-            .toList();
-    final products =
-        (await db.query(DbConstants.products, orderBy: 'created_at DESC'))
-            .map(ProductModel.fromMap)
-            .toList();
-    final plans = (await db.query(DbConstants.plans, orderBy: 'created_at DESC'))
-        .map(PurchasePlanModel.fromMap)
-        .toList();
+    final customers = (await db.query(
+      DbConstants.customers,
+      where: 'is_deleted = 0',
+      orderBy: 'created_at DESC',
+    )).map(CustomerModel.fromMap).toList();
+    final products = (await db.query(
+      DbConstants.products,
+      where: 'is_deleted = 0',
+      orderBy: 'created_at DESC',
+    )).map(ProductModel.fromMap).toList();
+    final plans = (await db.query(
+      DbConstants.plans,
+      where: 'is_deleted = 0',
+      orderBy: 'created_at DESC',
+    )).map(PurchasePlanModel.fromMap).toList();
     final installments = (await db.query(
       DbConstants.installments,
+      where: 'is_deleted = 0',
       orderBy: 'current_due_date ASC, sequence_number ASC',
-    ))
-        .map(InstallmentModel.fromMap)
-        .toList();
-    final payments = (await db.query(DbConstants.payments, orderBy: 'paid_on DESC'))
-        .map(PaymentRecordModel.fromMap)
-        .toList();
+    )).map(InstallmentModel.fromMap).toList();
+    final payments = (await db.query(
+      DbConstants.payments,
+      where: 'is_deleted = 0',
+      orderBy: 'paid_on DESC',
+    )).map(PaymentRecordModel.fromMap).toList();
 
     final customerById = {for (final item in customers) item.id!: item};
     final planById = {for (final item in plans) item.id!: item};
@@ -66,12 +71,15 @@ class DashboardRepository {
         customer: customer,
         plan: plan,
         installment: installment,
-        product: plan.primaryProductId == null ? null : productById[plan.primaryProductId!],
+        product: plan.primaryProductId == null
+            ? null
+            : productById[plan.primaryProductId!],
       );
       if (DateHelper.startOfDay(installment.currentDueDate) == effectiveToday) {
         dueToday.add(detail);
       }
-      if (installment.visualStatus(effectiveToday) == InstallmentVisualStatus.overdue) {
+      if (installment.visualStatus(effectiveToday) ==
+          InstallmentVisualStatus.overdue) {
         overdue.add(detail);
       } else {
         pending.add(detail);

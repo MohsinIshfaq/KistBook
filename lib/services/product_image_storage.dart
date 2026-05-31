@@ -18,6 +18,18 @@ class ProductImageStorage {
     return savedPath;
   }
 
+  static Future<String> saveBytes({
+    required List<int> bytes,
+    required String sourceName,
+  }) async {
+    final directory = await _ensureImageDirectory();
+    final extension = _safeExtension(sourceName);
+    final fileName = '${IdGenerator.localUuid()}$extension';
+    final savedPath = p.join(directory.path, fileName);
+    await File(savedPath).writeAsBytes(bytes, flush: true);
+    return savedPath;
+  }
+
   static Future<void> deleteImage(String imagePath) async {
     final trimmedPath = imagePath.trim();
     if (trimmedPath.isEmpty) {

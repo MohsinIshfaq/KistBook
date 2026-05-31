@@ -8,15 +8,16 @@ import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../core/utils/id_generator.dart';
+import '../../services/background_service.dart';
 
 class UserController extends GetxController {
   UserController({
     required UserRepository userRepository,
     required CustomerRepository customerRepository,
     required InstallmentRepository installmentRepository,
-  })  : _userRepository = userRepository,
-        _customerRepository = customerRepository,
-        _installmentRepository = installmentRepository;
+  }) : _userRepository = userRepository,
+       _customerRepository = customerRepository,
+       _installmentRepository = installmentRepository;
 
   final UserRepository _userRepository;
   final CustomerRepository _customerRepository;
@@ -95,7 +96,8 @@ class UserController extends GetxController {
         .where((item) => item.customerId == customerId && item.id != null)
         .map((item) => item.id!)
         .toList();
-    final allSelected = customerPlanIds.isNotEmpty &&
+    final allSelected =
+        customerPlanIds.isNotEmpty &&
         customerPlanIds.every(assignedPlanIds.contains);
     if (allSelected) {
       assignedPlanIds.removeAll(customerPlanIds);
@@ -132,11 +134,13 @@ class UserController extends GetxController {
       updatedAt: now,
     );
     await _userRepository.saveUser(user);
+    _requestSync();
     await loadUsers();
   }
 
   Future<void> deleteUser(int userId) async {
     await _userRepository.deleteUser(userId);
+    _requestSync();
     await loadUsers();
   }
 
@@ -154,10 +158,9 @@ class UserController extends GetxController {
   }
 
   bool isAllPlansAssignedForCustomer(int customerId) {
-    final customerPlanIds = plansForCustomer(customerId)
-        .where((item) => item.id != null)
-        .map((item) => item.id!)
-        .toList();
+    final customerPlanIds = plansForCustomer(
+      customerId,
+    ).where((item) => item.id != null).map((item) => item.id!).toList();
     if (customerPlanIds.isEmpty) {
       return false;
     }
@@ -170,5 +173,12 @@ class UserController extends GetxController {
       customerIds: assignedCustomerIds.toList(),
       planIds: assignedPlanIds.toList(),
     );
+    _requestSync();
+  }
+
+  void _requestSync() {
+    if (Get.isRegistered<BackgroundService>()) {
+      Get.find<BackgroundService>().requestSync();
+    }
   }
 }

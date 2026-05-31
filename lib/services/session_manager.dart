@@ -11,6 +11,10 @@ class SessionManager {
 
   static const String _userDataKey = 'userData';
   static const String _isLoggedInKey = 'is_logged_in';
+  static const String _apiBaseUrlKey = 'api_base_url';
+  static const String _apiTokenKey = 'api_token';
+  static const String _lastSyncDateKey = 'last_sync_date';
+  static const String _defaultApiBaseUrl = 'http://127.0.0.1:8000/api';
 
   final SharedPreferences _preferences;
 
@@ -60,6 +64,7 @@ class SessionManager {
 
   Future<void> clearSettings() async {
     await _preferences.remove(_userDataKey);
+    await _preferences.remove(_apiTokenKey);
     await _preferences.setBool(_isLoggedInKey, false);
     userData = {};
     userUuid = '';
@@ -71,6 +76,27 @@ class SessionManager {
   }
 
   bool get isLoggedIn => _preferences.getBool(_isLoggedInKey) ?? false;
+
+  String get apiBaseUrl =>
+      _preferences.getString(_apiBaseUrlKey) ?? _defaultApiBaseUrl;
+
+  String get apiToken => _preferences.getString(_apiTokenKey) ?? '';
+
+  String get lastSyncDate => _preferences.getString(_lastSyncDateKey) ?? '';
+
+  Future<void> saveApiSession({required String token, String? baseUrl}) async {
+    await _preferences.setString(_apiTokenKey, token);
+    if (baseUrl != null && baseUrl.trim().isNotEmpty) {
+      await _preferences.setString(_apiBaseUrlKey, baseUrl.trim());
+    }
+  }
+
+  Future<void> saveLastSyncDate(String value) async {
+    if (value.trim().isEmpty) {
+      return;
+    }
+    await _preferences.setString(_lastSyncDateKey, value);
+  }
 
   String get homeRoute => AppRoutes.dashboard;
 }

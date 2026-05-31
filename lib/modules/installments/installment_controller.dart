@@ -11,6 +11,7 @@ import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../services/access_control_service.dart';
+import '../../services/background_service.dart';
 
 class InstallmentController extends GetxController {
   InstallmentController({
@@ -18,10 +19,10 @@ class InstallmentController extends GetxController {
     required CustomerRepository customerRepository,
     required ProductRepository productRepository,
     required AccessControlService accessControlService,
-  })  : _installmentRepository = installmentRepository,
-        _customerRepository = customerRepository,
-        _productRepository = productRepository,
-        _accessControlService = accessControlService;
+  }) : _installmentRepository = installmentRepository,
+       _customerRepository = customerRepository,
+       _productRepository = productRepository,
+       _accessControlService = accessControlService;
 
   final InstallmentRepository _installmentRepository;
   final CustomerRepository _customerRepository;
@@ -61,7 +62,10 @@ class InstallmentController extends GetxController {
     required String notes,
   }) async {
     for (final productInput in products) {
-      final financedAmount = max(0.0, productInput.totalAmount - productInput.depositAmount);
+      final financedAmount = max(
+        0.0,
+        productInput.totalAmount - productInput.depositAmount,
+      );
       final installmentCount = financedAmount <= 0
           ? 0
           : max(1, (financedAmount / productInput.installmentAmount).ceil());
@@ -91,16 +95,24 @@ class InstallmentController extends GetxController {
         ),
       );
     }
+    _requestSync();
     await loadData();
   }
 
   Future<InstallmentPlanSummary?> updatePlan(PurchasePlanModel plan) async {
     await _installmentRepository.updatePlanConfiguration(plan);
+    _requestSync();
     await loadData();
     if (plan.id == null) {
       return null;
     }
     return _installmentRepository.fetchPlanSummary(plan.id!);
+  }
+
+  void _requestSync() {
+    if (Get.isRegistered<BackgroundService>()) {
+      Get.find<BackgroundService>().requestSync();
+    }
   }
 }
 

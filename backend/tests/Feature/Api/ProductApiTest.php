@@ -87,7 +87,11 @@ class ProductApiTest extends TestCase
             ->assertJsonPath('data.images.1.sort_order', 1);
 
         Storage::disk('public')->assertMissing($firstImagePath);
-        $this->assertDatabaseMissing('product_images', ['uuid' => $firstImageUuid]);
+        $this->assertSoftDeleted('product_images', ['uuid' => $firstImageUuid]);
+        $this->assertDatabaseHas('product_images', [
+            'uuid' => $firstImageUuid,
+            'is_deleted' => true,
+        ]);
         Storage::disk('public')->assertExists($updateResponse->json('data.images.1.path'));
     }
 }

@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../services/product_image_storage.dart';
 import '../database/db_constants.dart';
 import '../database/db_helper.dart';
+import '../database/sync_metadata.dart';
 import '../models/product_image_model.dart';
 import '../models/product_model.dart';
 import '../models/product_price_history_model.dart';
@@ -60,7 +61,10 @@ class ProductRepository extends GenericRepository<ProductModel> {
       if (productToSave.id == null) {
         productId = await txn.insert(
           DbConstants.products,
-          productToSave.toMap()..remove('id'),
+          SyncMetadata.withLocalChange(
+            DbConstants.products,
+            productToSave.toMap()..remove('id'),
+          ),
         );
         await txn.insert(
           DbConstants.productPriceHistory,
@@ -75,7 +79,10 @@ class ProductRepository extends GenericRepository<ProductModel> {
         productId = productToSave.id!;
         await txn.update(
           DbConstants.products,
-          productToSave.toMap()..remove('id'),
+          SyncMetadata.withLocalChange(
+            DbConstants.products,
+            productToSave.toMap()..remove('id'),
+          ),
           where: 'id = ?',
           whereArgs: [productId],
         );
@@ -125,13 +132,17 @@ class ProductRepository extends GenericRepository<ProductModel> {
     final database = await db;
     final imagePaths = await database.transaction<List<String>>((txn) async {
       final paths = await _fetchImagePaths(txn, productId);
-      await txn.delete(
+      await txn.update(
         DbConstants.productImages,
+        SyncMetadata.withLocalChange(DbConstants.productImages, {
+          'is_deleted': 1,
+        }),
         where: 'product_id = ?',
         whereArgs: [productId],
       );
-      await txn.delete(
+      await txn.update(
         DbConstants.products,
+        SyncMetadata.withLocalChange(DbConstants.products, {'is_deleted': 1}),
         where: 'id = ?',
         whereArgs: [productId],
       );
@@ -144,7 +155,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
     final database = await db;
     final rows = await database.query(
       DbConstants.products,
-      where: 'id = ?',
+      where: 'id = ? AND is_deleted = 0',
       whereArgs: [productId],
       limit: 1,
     );
@@ -200,7 +211,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
     final rows = await executor.query(
       DbConstants.productImages,
       columns: ['image_path'],
-      where: 'product_id = ?',
+      where: 'product_id = ? AND is_deleted = 0',
       whereArgs: [productId],
       orderBy: 'sort_order ASC, id ASC',
     );
@@ -222,7 +233,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
     final rows = await executor.query(
       DbConstants.productImages,
       columns: ['product_id', 'image_path'],
-      where: 'product_id IN ($placeholders)',
+      where: 'product_id IN ($placeholders) AND is_deleted = 0',
       whereArgs: productIds,
       orderBy: 'product_id ASC, sort_order ASC, id ASC',
     );
@@ -245,8 +256,11 @@ class ProductRepository extends GenericRepository<ProductModel> {
     List<String> imagePaths,
     DateTime createdAt,
   ) async {
-    await txn.delete(
+    await txn.update(
       DbConstants.productImages,
+      SyncMetadata.withLocalChange(DbConstants.productImages, {
+        'is_deleted': 1,
+      }),
       where: 'product_id = ?',
       whereArgs: [productId],
     );
@@ -254,12 +268,15 @@ class ProductRepository extends GenericRepository<ProductModel> {
     for (var index = 0; index < imagePaths.length; index += 1) {
       await txn.insert(
         DbConstants.productImages,
-        ProductImageModel(
-          productId: productId,
-          imagePath: imagePaths[index],
-          sortOrder: index,
-          createdAt: createdAt,
-        ).toMap()..remove('id'),
+        SyncMetadata.withLocalChange(
+          DbConstants.productImages,
+          ProductImageModel(
+            productId: productId,
+            imagePath: imagePaths[index],
+            sortOrder: index,
+            createdAt: createdAt,
+          ).toMap()..remove('id'),
+        ),
       );
     }
   }

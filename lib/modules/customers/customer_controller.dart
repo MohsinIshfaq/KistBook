@@ -5,15 +5,16 @@ import '../../data/models/dashboard_models.dart';
 import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../services/access_control_service.dart';
+import '../../services/background_service.dart';
 
 class CustomerController extends GetxController {
   CustomerController({
     required CustomerRepository customerRepository,
     required InstallmentRepository installmentRepository,
     required AccessControlService accessControlService,
-  })  : _customerRepository = customerRepository,
-        _installmentRepository = installmentRepository,
-        _accessControlService = accessControlService;
+  }) : _customerRepository = customerRepository,
+       _installmentRepository = installmentRepository,
+       _accessControlService = accessControlService;
 
   final CustomerRepository _customerRepository;
   final InstallmentRepository _installmentRepository;
@@ -45,11 +46,13 @@ class CustomerController extends GetxController {
 
   Future<void> saveCustomer(CustomerModel customer) async {
     await _customerRepository.saveCustomer(customer);
+    _requestSync();
     await loadCustomers();
   }
 
   Future<void> deleteCustomer(int customerId) async {
     await _customerRepository.deleteCustomer(customerId);
+    _requestSync();
     await loadCustomers();
   }
 
@@ -85,5 +88,11 @@ class CustomerController extends GetxController {
       final cardNumber = customer.cardNumber.toLowerCase();
       return name.contains(query) || cardNumber.contains(query);
     }).toList();
+  }
+
+  void _requestSync() {
+    if (Get.isRegistered<BackgroundService>()) {
+      Get.find<BackgroundService>().requestSync();
+    }
   }
 }

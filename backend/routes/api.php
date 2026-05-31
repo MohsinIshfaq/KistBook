@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SyncController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function (): void {
@@ -30,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::post('access/customer', [AccessController::class, 'assignCustomer']);
     Route::post('access/plan', [AccessController::class, 'assignPlan']);
+
+    Route::post('sync/upload', [SyncController::class, 'upload']);
+    Route::get('sync/download', [SyncController::class, 'download']);
 
     Route::get('dashboard', [DashboardController::class, 'index']);
 });

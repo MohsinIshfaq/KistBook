@@ -6,11 +6,13 @@ use App\Traits\HasUuid;
 use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductImage extends Model
 {
     use HasUuid;
     use LogsSyncChanges;
+    use SoftDeletes;
 
     protected $fillable = [
         'uuid',
@@ -21,6 +23,7 @@ class ProductImage extends Model
         'mime_type',
         'size',
         'sort_order',
+        'is_deleted',
     ];
 
     protected function casts(): array
@@ -28,6 +31,7 @@ class ProductImage extends Model
         return [
             'size' => 'integer',
             'sort_order' => 'integer',
+            'is_deleted' => 'boolean',
         ];
     }
 

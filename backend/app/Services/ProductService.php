@@ -181,6 +181,7 @@ class ProductService implements ProductServiceInterface
 
         foreach ($images as $image) {
             Storage::disk($image->disk)->delete($image->path);
+            $image->forceFill(['is_deleted' => true])->save();
             $image->delete();
         }
     }

@@ -1,5 +1,6 @@
 import '../../data/database/db_constants.dart';
 import '../../data/database/db_helper.dart';
+import '../../data/database/sync_metadata.dart';
 import '../../core/utils/date_helper.dart';
 import '../../core/constants/app_enums.dart';
 import '../models/customer_model.dart';
@@ -12,11 +13,11 @@ import 'sql_expression.dart';
 
 class CustomerRepository extends GenericRepository<CustomerModel> {
   CustomerRepository(DbHelper dbHelper)
-      : super(
-          dbHelper: dbHelper,
-          tableName: DbConstants.customers,
-          fromMap: CustomerModel.fromMap,
-        );
+    : super(
+        dbHelper: dbHelper,
+        tableName: DbConstants.customers,
+        fromMap: CustomerModel.fromMap,
+      );
 
   Future<List<CustomerModel>> fetchCustomers() async {
     return getAll(orderBy: 'created_at DESC');
@@ -33,20 +34,38 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
       final planRows = await txn.query(
         DbConstants.plans,
         columns: ['id'],
-        where: 'customer_id = ?',
+        where: 'customer_id = ? AND is_deleted = 0',
         whereArgs: [customerId],
       );
       for (final row in planRows) {
         final planId = row['id'] as int;
-        await txn.delete(DbConstants.payments, where: 'plan_id = ?', whereArgs: [planId]);
-        await txn.delete(
+        await txn.update(
+          DbConstants.payments,
+          SyncMetadata.withLocalChange(DbConstants.payments, {'is_deleted': 1}),
+          where: 'plan_id = ?',
+          whereArgs: [planId],
+        );
+        await txn.update(
           DbConstants.installments,
+          SyncMetadata.withLocalChange(DbConstants.installments, {
+            'is_deleted': 1,
+          }),
           where: 'plan_id = ?',
           whereArgs: [planId],
         );
       }
-      await txn.delete(DbConstants.plans, where: 'customer_id = ?', whereArgs: [customerId]);
-      await txn.delete(DbConstants.customers, where: 'id = ?', whereArgs: [customerId]);
+      await txn.update(
+        DbConstants.plans,
+        SyncMetadata.withLocalChange(DbConstants.plans, {'is_deleted': 1}),
+        where: 'customer_id = ?',
+        whereArgs: [customerId],
+      );
+      await txn.update(
+        DbConstants.customers,
+        SyncMetadata.withLocalChange(DbConstants.customers, {'is_deleted': 1}),
+        where: 'id = ?',
+        whereArgs: [customerId],
+      );
     });
   }
 
@@ -59,27 +78,25 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     final db = await super.db;
     final plans = (await db.query(
       DbConstants.plans,
-      where: SQLCondition('customer_id', '=', customerId).buildQuery(),
+      where:
+          '${SQLCondition('customer_id', '=', customerId).buildQuery()} AND is_deleted = 0',
       whereArgs: [customerId],
       orderBy: 'created_at DESC',
-    ))
-        .map(PurchasePlanModel.fromMap)
-        .toList();
+    )).map(PurchasePlanModel.fromMap).toList();
     final payments = (await db.query(
       DbConstants.payments,
-      where: SQLCondition('customer_id', '=', customerId).buildQuery(),
+      where:
+          '${SQLCondition('customer_id', '=', customerId).buildQuery()} AND is_deleted = 0',
       whereArgs: [customerId],
       orderBy: 'paid_on DESC',
-    ))
-        .map(PaymentRecordModel.fromMap)
-        .toList();
+    )).map(PaymentRecordModel.fromMap).toList();
     final installments = <InstallmentModel>[];
     final history = <CustomerHistoryEntry>[];
 
     for (final plan in plans) {
       final rows = await db.query(
         DbConstants.installments,
-        where: 'plan_id = ?',
+        where: 'plan_id = ? AND is_deleted = 0',
         whereArgs: [plan.id],
         orderBy: 'sequence_number ASC',
       );
@@ -149,18 +166,29 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     );
   }
 
-  Future<Map<int, CustomerPaymentInsight>> fetchCustomerPaymentInsights() async {
+  Future<Map<int, CustomerPaymentInsight>>
+  fetchCustomerPaymentInsights() async {
     final db = await super.db;
     final customers = await fetchCustomers();
-    final plans = (await db.query(DbConstants.plans)).map(PurchasePlanModel.fromMap).toList();
-    final installments =
-        (await db.query(DbConstants.installments)).map(InstallmentModel.fromMap).toList();
-    final payments = (await db.query(DbConstants.payments)).map(PaymentRecordModel.fromMap).toList();
+    final plans = (await db.query(
+      DbConstants.plans,
+      where: 'is_deleted = 0',
+    )).map(PurchasePlanModel.fromMap).toList();
+    final installments = (await db.query(
+      DbConstants.installments,
+      where: 'is_deleted = 0',
+    )).map(InstallmentModel.fromMap).toList();
+    final payments = (await db.query(
+      DbConstants.payments,
+      where: 'is_deleted = 0',
+    )).map(PaymentRecordModel.fromMap).toList();
     final today = DateHelper.startOfDay(DateTime.now());
 
     final paymentsByInstallment = <int, List<PaymentRecordModel>>{};
     for (final payment in payments) {
-      paymentsByInstallment.putIfAbsent(payment.installmentId, () => []).add(payment);
+      paymentsByInstallment
+          .putIfAbsent(payment.installmentId, () => [])
+          .add(payment);
     }
     for (final item in paymentsByInstallment.values) {
       item.sort((a, b) => a.paidOn.compareTo(b.paidOn));
@@ -171,7 +199,9 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
         if (customer.id != null)
           customer.id!: _buildInsight(
             customerId: customer.id!,
-            plans: plans.where((plan) => plan.customerId == customer.id).toList(),
+            plans: plans
+                .where((plan) => plan.customerId == customer.id)
+                .toList(),
             installments: installments,
             paymentsByInstallment: paymentsByInstallment,
             today: today,
@@ -187,10 +217,9 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     required DateTime today,
   }) {
     final planIds = plans.map((item) => item.id).whereType<int>().toSet();
-    final relevantInstallments = installments
-        .where((item) => planIds.contains(item.planId))
-        .toList()
-      ..sort((a, b) => a.currentDueDate.compareTo(b.currentDueDate));
+    final relevantInstallments =
+        installments.where((item) => planIds.contains(item.planId)).toList()
+          ..sort((a, b) => a.currentDueDate.compareTo(b.currentDueDate));
 
     var maturedInstallments = 0;
     var onTimeInstallments = 0;
@@ -198,7 +227,8 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     DateTime? lastPaymentDate;
 
     for (final installment in relevantInstallments) {
-      final paymentTrail = paymentsByInstallment[installment.id ?? -1] ?? const [];
+      final paymentTrail =
+          paymentsByInstallment[installment.id ?? -1] ?? const [];
       if (paymentTrail.isNotEmpty) {
         final latest = paymentTrail.last.paidOn;
         if (lastPaymentDate == null || latest.isAfter(lastPaymentDate)) {
@@ -214,14 +244,16 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
 
       maturedInstallments += 1;
       final paidDate = _paidInFullDate(installment, paymentTrail);
-      final isOnTime = paidDate != null && !DateHelper.startOfDay(paidDate).isAfter(dueDate);
+      final isOnTime =
+          paidDate != null && !DateHelper.startOfDay(paidDate).isAfter(dueDate);
       if (isOnTime) {
         onTimeInstallments += 1;
         continue;
       }
 
       if (installment.status == InstallmentRecordStatus.missed ||
-          (paidDate != null && DateHelper.startOfDay(paidDate).isAfter(dueDate)) ||
+          (paidDate != null &&
+              DateHelper.startOfDay(paidDate).isAfter(dueDate)) ||
           (paidDate == null && dueDate.isBefore(today)) ||
           (paidDate == null && dueDate.isAtSameMomentAs(today))) {
         lateInstallments += 1;
@@ -231,7 +263,9 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     var activePlans = 0;
     var completedPlans = 0;
     for (final plan in plans) {
-      final planInstallments = relevantInstallments.where((item) => item.planId == plan.id).toList();
+      final planInstallments = relevantInstallments
+          .where((item) => item.planId == plan.id)
+          .toList();
       if (planInstallments.isEmpty) {
         continue;
       }
@@ -245,15 +279,18 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
 
     final latestPlan = plans.isEmpty
         ? null
-        : (plans.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt))).first;
+        : (plans.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+              .first;
     final latestPlanInstallments = latestPlan == null
         ? const <InstallmentModel>[]
-        : relevantInstallments.where((item) => item.planId == latestPlan.id).toList();
+        : relevantInstallments
+              .where((item) => item.planId == latestPlan.id)
+              .toList();
     final currentPlanStatus = latestPlan == null
         ? 'No previous plan'
         : latestPlanInstallments.any((item) => !item.isPaid)
-            ? 'Running plan'
-            : 'Completed plan';
+        ? 'Running plan'
+        : 'Completed plan';
     final onTimePercentage = maturedInstallments == 0
         ? 0.0
         : (onTimeInstallments / maturedInstallments) * 100;
