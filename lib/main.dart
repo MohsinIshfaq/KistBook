@@ -23,8 +23,8 @@ Future<void> main() async {
   final binding = InitialBinding();
   binding.dependencies();
   await Get.find<DbHelper>().initialize();
-  await sessionManager.loadData();
-  if (sessionManager.isLoggedIn) {
+  await sessionManager.loadAuthData();
+  if (sessionManager.canRestoreSession) {
     await Get.find<BackgroundService>().start();
   }
   runApp(const KistBookApp());
@@ -75,7 +75,7 @@ class KistBookApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          initialRoute: Get.find<SessionManager>().isLoggedIn
+          initialRoute: Get.find<SessionManager>().canRestoreSession
               ? Get.find<SessionManager>().homeRoute
               : AppRoutes.login,
           getPages: AppPages.routes,

@@ -99,7 +99,7 @@ Run tests:
 
 ## Demo Credentials
 
-- Admin
+- Owner
   - Phone: `03000000001`
   - Password: `password`
 - Salesman
@@ -112,8 +112,10 @@ Run tests:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/auth/profile`
 - `POST /api/auth/logout`
-- `GET /api/me`
+- `GET /api/me` (backward-compatible profile alias)
+- `POST /api/company/users` owner-only salesman creation
 
 ### CRUD
 
@@ -146,12 +148,14 @@ curl -X POST http://127.0.0.1:8000/api/auth/register \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
+    "name": "New Owner",
+    "email": "owner@example.com",
     "phone": "03001234567",
-    "email": "newuser@example.com",
     "password": "password",
-    "first_name": "New",
-    "last_name": "User",
-    "access_level": "salesman"
+    "password_confirmation": "password",
+    "company_name": "KistBook Demo Company",
+    "company_phone": "03001234567",
+    "company_address": "Bahawalpur"
   }'
 ```
 
@@ -162,8 +166,24 @@ curl -X POST http://127.0.0.1:8000/api/auth/login \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-    "phone": "03000000001",
+    "login": "03000000001",
     "password": "password"
+  }'
+```
+
+Create salesman as an authenticated owner:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/company/users \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Sales Man",
+    "email": "salesman@example.com",
+    "phone": "03123456789",
+    "password": "password",
+    "password_confirmation": "password"
   }'
 ```
 

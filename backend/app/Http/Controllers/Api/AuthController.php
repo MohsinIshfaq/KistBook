@@ -6,34 +6,39 @@ use App\Contracts\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\CompanyResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly AuthServiceInterface $authService)
-    {
-    }
+    public function __construct(private readonly AuthServiceInterface $authService) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
         $result = $this->authService->register($request->validated());
 
-        return $this->successResponse([
-            'user' => new UserResource($result['user']),
+        return response()->json([
+            'success' => true,
+            'message' => 'Account created successfully.',
             'token' => $result['token'],
-        ], 'User registered successfully.', 201);
+            'user' => new UserResource($result['user']),
+            'company' => new CompanyResource($result['company']),
+        ], 201);
     }
 
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $this->authService->login($request->validated());
 
-        return $this->successResponse([
-            'user' => new UserResource($result['user']),
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful.',
             'token' => $result['token'],
-        ], 'Login successful.');
+            'user' => new UserResource($result['user']),
+            'company' => new CompanyResource($result['company']),
+        ]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -45,6 +50,14 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return $this->successResponse(new UserResource($request->user()), 'Authenticated user fetched successfully.');
+        $user = $request->user()->load('company');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Authenticated user fetched successfully.',
+            'user' => new UserResource($user),
+            'company' => $user->company ? new CompanyResource($user->company) : null,
+            'role' => $user->role?->value ?? $user->role,
+        ]);
     }
 }

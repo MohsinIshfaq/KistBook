@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CompanyUserController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InstallmentController;
@@ -19,7 +20,9 @@ Route::prefix('auth')->group(function (): void {
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/profile', [AuthController::class, 'me']);
     Route::get('me', [AuthController::class, 'me']);
+    Route::post('company/users', [CompanyUserController::class, 'store']);
 
     Route::apiResource('customers', CustomerController::class)->parameter('customers', 'uuid');
     Route::apiResource('products', ProductController::class)->parameter('products', 'uuid');

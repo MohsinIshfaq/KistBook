@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../core/constants/app_enums.dart';
+import '../../core/services/api_services.dart';
 import '../../core/utils/text_helper.dart';
+import '../../core/widgets/app_loading_overlay.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../data/models/local_user_model.dart';
@@ -21,8 +22,9 @@ class _UserFormViewState extends State<UserFormView> {
   final firstNameController = TextEditingController();
   final lastNameController = TextEditingController();
   final phoneController = TextEditingController();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  UserRole selectedRole = UserRole.salesMan;
+  final confirmPasswordController = TextEditingController();
   bool obscurePassword = true;
   LocalUserModel? existing;
 
@@ -35,8 +37,9 @@ class _UserFormViewState extends State<UserFormView> {
       firstNameController.text = arg.firstName;
       lastNameController.text = arg.lastName;
       phoneController.text = arg.phone;
+      emailController.text = arg.email;
       passwordController.text = arg.password;
-      selectedRole = arg.role;
+      confirmPasswordController.text = arg.password;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadFormData(user: existing);
@@ -48,7 +51,9 @@ class _UserFormViewState extends State<UserFormView> {
     firstNameController.dispose();
     lastNameController.dispose();
     phoneController.dispose();
+    emailController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -76,6 +81,13 @@ class _UserFormViewState extends State<UserFormView> {
                 controller: lastNameController,
                 prefixIcon: Icons.badge_outlined,
                 textCapitalization: TextCapitalization.words,
+              ),
+              AppTextField(
+                label: 'Email Address'.tr,
+                hint: 'salesman@example.com',
+                controller: emailController,
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
               ),
               AppTextField(
                 label: 'Phone Number'.tr,
@@ -111,7 +123,10 @@ class _UserFormViewState extends State<UserFormView> {
                       obscureText: obscurePassword,
                       decoration: InputDecoration(
                         hintText: 'Enter password'.tr,
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 20,
+                        ),
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() => obscurePassword = !obscurePassword);
@@ -121,6 +136,38 @@ class _UserFormViewState extends State<UserFormView> {
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                           ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 2, bottom: 8),
+                      child: Text(
+                        'Confirm Password'.tr,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFF14213D),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Re-enter password'.tr,
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -145,14 +192,7 @@ class _UserFormViewState extends State<UserFormView> {
                         ),
                       ),
                     ),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _roleChip(UserRole.admin),
-                        _roleChip(UserRole.salesMan),
-                      ],
-                    ),
+                    const Chip(label: Text('Salesman')),
                   ],
                 ),
               ),
@@ -168,22 +208,13 @@ class _UserFormViewState extends State<UserFormView> {
     );
   }
 
-  Widget _roleChip(UserRole role) {
-    final selected = selectedRole == role;
-    return ChoiceChip(
-      label: Text(role.label),
-      selected: selected,
-      onSelected: (_) {
-        setState(() => selectedRole = role);
-      },
-    );
-  }
-
   Future<void> _submit() async {
     final firstName = TextHelper.toTitleCase(firstNameController.text);
     final lastName = TextHelper.toTitleCase(lastNameController.text);
     final phone = TextHelper.digitsOnly(phoneController.text);
+    final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
     final errors = <String>[];
 
     if (firstName.isEmpty) {
@@ -195,8 +226,14 @@ class _UserFormViewState extends State<UserFormView> {
     if (phone.length != 11) {
       errors.add('Phone number must be 11 digits.'.tr);
     }
-    if (password.length < 6) {
-      errors.add('Password should be at least 6 characters.'.tr);
+    if (!GetUtils.isEmail(email)) {
+      errors.add('Enter a valid email address.'.tr);
+    }
+    if (password.length < 8) {
+      errors.add('Password should be at least 8 characters.'.tr);
+    }
+    if (password != confirmPassword) {
+      errors.add('Password and confirm password must match.'.tr);
     }
 
     if (errors.isNotEmpty) {
@@ -209,19 +246,31 @@ class _UserFormViewState extends State<UserFormView> {
     }
 
     try {
-      await controller.saveUser(
-        existing: existing,
-        phone: phone,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-        role: selectedRole,
+      await AppLoadingOverlay.run(
+        context,
+        message: existing == null ? 'Creating salesman...' : 'Saving user...',
+        task: () => controller.saveUser(
+          existing: existing,
+          phone: phone,
+          email: email,
+          password: password,
+          passwordConfirmation: confirmPassword,
+          firstName: firstName,
+          lastName: lastName,
+        ),
       );
-    } on StateError {
+    } on StateError catch (error) {
       showBannerAlert(
         type: BannerStyle.error,
         title: 'Validation Errors'.tr,
-        messages: ['Phone number already exists.'.tr],
+        messages: [error.message.tr],
+      );
+      return;
+    } on ApiException catch (error) {
+      showBannerAlert(
+        type: BannerStyle.error,
+        title: 'Unable to Save User'.tr,
+        messages: error.displayMessages,
       );
       return;
     }

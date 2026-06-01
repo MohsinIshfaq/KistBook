@@ -4,7 +4,8 @@ import 'package:get/get.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/constants/app_enums.dart';
-import '../../services/background_service.dart';
+import '../../core/widgets/app_loading_overlay.dart';
+import '../../modules/auth/auth_controller.dart';
 import '../../services/session_manager.dart';
 import '../constants/app_strings.dart';
 
@@ -27,14 +28,25 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = Get.find<SessionManager>();
+    final authController = Get.find<AuthController>();
     final isRestrictedUser = session.role != UserRole.owner;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final drawerBackground = isDark ? AppColors.brandSecondary : AppColors.surface;
-    final drawerPanelColor = isDark ? const Color(0xFF111827) : AppColors.surfaceMuted;
-    final drawerPanelBorder = isDark ? const Color(0xFF1F2937) : AppColors.border;
-    final drawerMutedText = isDark ? const Color(0xFFD0D5DD) : AppColors.inkSoft;
-    final drawerSectionText = isDark ? const Color(0xFF98A2B3) : AppColors.inkMuted;
+    final drawerBackground = isDark
+        ? AppColors.brandSecondary
+        : AppColors.surface;
+    final drawerPanelColor = isDark
+        ? const Color(0xFF111827)
+        : AppColors.surfaceMuted;
+    final drawerPanelBorder = isDark
+        ? const Color(0xFF1F2937)
+        : AppColors.border;
+    final drawerMutedText = isDark
+        ? const Color(0xFFD0D5DD)
+        : AppColors.inkSoft;
+    final drawerSectionText = isDark
+        ? const Color(0xFF98A2B3)
+        : AppColors.inkMuted;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,15 +55,14 @@ class AppShell extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
+            Text(title, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(
               'Manage customers, installments, and reports'.tr,
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.92),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.92,
+                ),
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -107,29 +118,37 @@ class AppShell extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Installment operations for modern micro business teams'.tr,
-                    style: TextStyle(
-                      color: Color(0xFFD0D5DD),
-                      height: 1.4,
-                    ),
+                    style: TextStyle(color: Color(0xFFD0D5DD), height: 1.4),
                   ),
-                  if (session.fullName.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      session.fullName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${session.role.label} • ${session.phone}',
-                      style: const TextStyle(
-                        color: Color(0xFFD0D5DD),
-                      ),
-                    ),
-                  ],
+                  Obx(() {
+                    final profile = authController.currentUser.value;
+                    final name = profile?.fullName ?? session.fullName;
+                    final contact =
+                        profile?.phone ?? profile?.email ?? session.phone;
+                    final role = profile?.role ?? session.role;
+                    if (name.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 14),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${role.label} • $contact',
+                          style: const TextStyle(color: Color(0xFFD0D5DD)),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),
@@ -207,8 +226,7 @@ class AppShell extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 currentRoute: currentRoute,
               ),
-            if (!isRestrictedUser)
-              const SizedBox(height: 12),
+            if (!isRestrictedUser) const SizedBox(height: 12),
             if (!isRestrictedUser)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -225,22 +243,35 @@ class AppShell extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 12),
-            ListTile(
-              onTap: () async {
-                Navigator.of(context).pop();
-                await Get.find<SessionManager>().clearSettings();
-                Get.find<BackgroundService>().dispose();
-                Get.offAllNamed(AppRoutes.login);
-              },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
-              title: Text(
-                'Logout'.tr,
-                style: const TextStyle(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w700,
+            Obx(
+              () => ListTile(
+                onTap: authController.isLogoutLoading.value
+                    ? null
+                    : () async {
+                        Navigator.of(context).pop();
+                        await AppLoadingOverlay.runFromGet(
+                          message: 'Signing out...',
+                          task: authController.logout,
+                        );
+                      },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                leading: authController.isLogoutLoading.value
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout_rounded, color: AppColors.danger),
+                title: Text(
+                  authController.isLogoutLoading.value
+                      ? 'Logging out...'.tr
+                      : 'Logout'.tr,
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -275,8 +306,8 @@ class _NavTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: selected
             ? (isDark
-                ? const Color(0x1AFFFFFF)
-                : AppColors.brandPrimary.withValues(alpha: 0.10))
+                  ? const Color(0x1AFFFFFF)
+                  : AppColors.brandPrimary.withValues(alpha: 0.10))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(18),
       ),

@@ -8,7 +8,7 @@ class AssignCustomerAccessRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->isOwner() === true;
     }
 
     public function rules(): array

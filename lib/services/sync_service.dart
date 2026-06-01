@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../core/constants/api_urls.dart';
 import '../core/constants/app_enums.dart';
 import '../data/database/db_constants.dart';
 import '../data/database/db_helper.dart';
@@ -89,7 +90,7 @@ class SyncService {
         continue;
       }
 
-      final responseData = await _postJson('/sync/upload', {
+      final responseData = await _postJson(API.URL_SYNC_UPLOAD, {
         'changes': {tableName: payload},
       });
       await _applyUploadMappings(
@@ -101,7 +102,7 @@ class SyncService {
 
   Future<void> _downloadServerChanges() async {
     final lastSyncDate = _sessionManager.lastSyncDate;
-    final responseData = await _getJson('/sync/download', {
+    final responseData = await _getJson(API.URL_SYNC_DOWNLOAD, {
       if (lastSyncDate.isNotEmpty) 'last_sync_date': lastSyncDate,
     });
     final changes = responseData['changes'];
@@ -154,13 +155,9 @@ class SyncService {
     'Authorization': 'Bearer ${_sessionManager.apiToken}',
   };
 
-  Uri _apiUri(String path, [Map<String, String>? query]) {
-    final baseUrl = _sessionManager.apiBaseUrl.trim().replaceFirst(
-      RegExp(r'/+$'),
-      '',
-    );
+  Uri _apiUri(String url, [Map<String, String>? query]) {
     return Uri.parse(
-      '$baseUrl$path',
+      API.rebaseUrl(url: url, baseURL: _sessionManager.apiBaseUrl),
     ).replace(queryParameters: query == null || query.isEmpty ? null : query);
   }
 
@@ -198,6 +195,7 @@ class SyncService {
         payload.addAll({
           'uuid': _string(row, 'uuid'),
           'phone': _string(row, 'phone'),
+          'email': _string(row, 'email'),
           'password': _string(row, 'password'),
           'first_name': _string(row, 'first_name'),
           'last_name': _string(row, 'last_name'),
@@ -479,10 +477,13 @@ class SyncService {
         return {
           'uuid': record['uuid']?.toString() ?? record['server_id']?.toString(),
           'phone': record['phone']?.toString() ?? '',
+          'email': record['email']?.toString() ?? '',
           'password': record['password']?.toString() ?? 'remote-login-only',
           'first_name': record['first_name']?.toString() ?? '',
           'last_name': record['last_name']?.toString() ?? '',
-          'role': _localRole(record['access_level']?.toString()),
+          'role': _localRole(
+            record['role']?.toString() ?? record['access_level']?.toString(),
+          ),
           'is_active': record['is_active'] == false ? 0 : 1,
         };
       case DbConstants.customers:
@@ -793,16 +794,11 @@ class SyncService {
   }
 
   Uri _imageUri(String imageUrl) {
-    final uri = Uri.parse(imageUrl);
-    if (uri.hasScheme) {
-      return uri;
-    }
-    final api = Uri.parse(_sessionManager.apiBaseUrl);
-    return Uri(
-      scheme: api.scheme,
-      host: api.host,
-      port: api.hasPort ? api.port : null,
-      path: imageUrl.startsWith('/') ? imageUrl : '/$imageUrl',
+    return Uri.parse(
+      API.productImageUrl(
+        imagePath: imageUrl,
+        baseURL: _sessionManager.apiBaseUrl,
+      ),
     );
   }
 

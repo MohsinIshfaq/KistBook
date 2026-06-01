@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\AccessLevel;
+use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -16,6 +17,7 @@ class SyncApiTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create([
             'access_level' => AccessLevel::Owner,
+            'role' => AccessLevel::Owner,
         ]));
 
         $uploadResponse = $this->postJson('/api/sync/upload', [
@@ -56,5 +58,53 @@ class SyncApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.changes.customers.0.server_id', $serverId)
             ->assertJsonPath('data.changes.customers.0.name', 'Sync Customer');
+    }
+
+    public function test_owner_sync_download_only_contains_own_company_records(): void
+    {
+        $firstOwner = User::factory()->owner()->create();
+        $secondOwner = User::factory()->owner()->create();
+        $firstCustomer = Customer::factory()->create([
+            'company_id' => $firstOwner->company_id,
+        ]);
+        Customer::factory()->create([
+            'company_id' => $secondOwner->company_id,
+        ]);
+        Sanctum::actingAs($firstOwner);
+
+        $response = $this->getJson('/api/sync/download');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data.changes.customers')
+            ->assertJsonPath('data.changes.customers.0.server_id', $firstCustomer->uuid);
+    }
+
+    public function test_salesman_cannot_delete_user_through_sync(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $salesman = User::factory()->create([
+            'company_id' => $owner->company_id,
+        ]);
+        Sanctum::actingAs($salesman);
+
+        $response = $this->postJson('/api/sync/upload', [
+            'changes' => [
+                'users' => [
+                    [
+                        'server_id' => $salesman->uuid,
+                        'is_deleted' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.errors.users.0.message', 'Only an owner can manage company users.');
+        $this->assertDatabaseHas('users', [
+            'uuid' => $salesman->uuid,
+            'is_deleted' => false,
+        ]);
     }
 }

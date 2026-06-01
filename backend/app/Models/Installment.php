@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InstallmentStatus;
+use App\Traits\BelongsToCompany;
 use App\Traits\HasUuid;
 use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Installment extends Model
 {
+    use BelongsToCompany;
     use HasFactory;
     use HasUuid;
     use LogsSyncChanges;
@@ -20,6 +22,7 @@ class Installment extends Model
 
     protected $fillable = [
         'uuid',
+        'company_id',
         'plan_uuid',
         'sequence_number',
         'scheduled_due_date',

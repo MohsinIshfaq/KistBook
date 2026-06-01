@@ -10,6 +10,7 @@ class DashboardBinding extends Bindings {
         dashboardRepository: Get.find(),
         reportRepository: Get.find(),
         accessControlService: Get.find(),
+        authController: Get.find(),
       ),
     );
   }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
 use App\Traits\HasUuid;
 use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Payment extends Model
 {
+    use BelongsToCompany;
     use HasFactory;
     use HasUuid;
     use LogsSyncChanges;
@@ -18,6 +20,7 @@ class Payment extends Model
 
     protected $fillable = [
         'uuid',
+        'company_id',
         'operation_uuid',
         'customer_uuid',
         'plan_uuid',

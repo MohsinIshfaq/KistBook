@@ -10,5 +10,7 @@ interface UserRepositoryInterface
 
     public function findByPhone(string $phone): ?User;
 
+    public function findByLogin(string $login): ?User;
+
     public function findByUuidOrFail(string $uuid): User;
 }

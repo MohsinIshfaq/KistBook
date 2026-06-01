@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/utils/text_helper.dart';
+import '../../core/widgets/app_loading_overlay.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../modules/auth/auth_controller.dart';
 import '../../services/session_manager.dart';
@@ -23,6 +23,16 @@ class _LoginViewState extends State<LoginView> {
   final passwordController = TextEditingController();
   bool obscurePassword = true;
   bool rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final session = Get.find<SessionManager>();
+    rememberMe = session.rememberLogin;
+    if (rememberMe) {
+      phoneController.text = session.rememberedLogin;
+    }
+  }
 
   @override
   void dispose() {
@@ -53,7 +63,7 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Sign in with your phone number and password to continue to KistBook.'
+                'Sign in with your email address or mobile number to continue to KistBook.'
                     .tr,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: isDark ? Colors.white70 : AppColors.inkSoft,
@@ -63,15 +73,11 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 36),
               AuthTextField(
-                label: 'Phone Number'.tr,
-                hint: '03001234567',
+                label: 'Email or Mobile Number'.tr,
+                hint: 'owner@example.com or 03001234567',
                 controller: phoneController,
-                prefixIcon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(11),
-                ],
+                prefixIcon: Icons.account_circle_outlined,
+                keyboardType: TextInputType.emailAddress,
               ),
               AuthPasswordField(
                 label: 'Password'.tr,
@@ -171,15 +177,18 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _submitLogin() async {
-    final phone = TextHelper.digitsOnly(phoneController.text);
+    final login = phoneController.text.trim().toLowerCase();
     final password = passwordController.text.trim();
     final errors = <String>[];
 
-    if (phone.isEmpty) {
-      errors.add('Phone number is required.'.tr);
-    }
-    if (phone.length != 11) {
-      errors.add('Phone number must be 11 digits.'.tr);
+    if (login.isEmpty) {
+      errors.add('Email or mobile number is required.'.tr);
+    } else if (RegExp(r'^\d+$').hasMatch(login)) {
+      if (TextHelper.digitsOnly(login).length != 11) {
+        errors.add('Mobile number must be 11 digits.'.tr);
+      }
+    } else if (!GetUtils.isEmail(login)) {
+      errors.add('Enter a valid email address or mobile number.'.tr);
     }
     if (password.isEmpty) {
       errors.add('Password is required.'.tr);
@@ -194,19 +203,28 @@ class _LoginViewState extends State<LoginView> {
       return;
     }
 
-    final user = await controller.login(phone: phone, password: password);
+    final user = await AppLoadingOverlay.run(
+      context,
+      message: 'Logging in...',
+      task: () => controller.login(
+        login: login,
+        password: password,
+        rememberMe: rememberMe,
+      ),
+    );
     if (!mounted) {
       return;
     }
     if (user == null) {
+      final message = controller.errorMessage.value.trim();
       showBannerAlert(
         type: BannerStyle.error,
         title: 'Login Failed'.tr,
-        messages: ['Invalid phone number or password.'.tr],
+        messages: message.isEmpty
+            ? ['Invalid email, mobile number, or password.'.tr]
+            : message.split('\n'),
       );
-      return;
     }
-    Get.offAllNamed(Get.find<SessionManager>().homeRoute);
   }
 }
 

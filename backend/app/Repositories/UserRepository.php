@@ -20,6 +20,14 @@ class UserRepository implements UserRepositoryInterface
         return User::query()->where('phone', $phone)->first();
     }
 
+    public function findByLogin(string $login): ?User
+    {
+        return User::query()
+            ->where('email', $login)
+            ->orWhere('phone', $login)
+            ->first();
+    }
+
     public function findByUuidOrFail(string $uuid): User
     {
         return User::query()->where('uuid', $uuid)->firstOrFail();

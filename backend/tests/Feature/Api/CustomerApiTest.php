@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -30,5 +31,17 @@ class CustomerApiTest extends TestCase
         $this->getJson('/api/customers/'.$uuid)
             ->assertOk()
             ->assertJsonPath('data.name', 'Ali Khan');
+    }
+
+    public function test_user_cannot_fetch_another_company_customer(): void
+    {
+        $firstOwner = User::factory()->owner()->create();
+        $secondOwner = User::factory()->owner()->create();
+        $customer = Customer::factory()->create([
+            'company_id' => $firstOwner->company_id,
+        ]);
+        Sanctum::actingAs($secondOwner);
+
+        $this->getJson('/api/customers/'.$customer->uuid)->assertNotFound();
     }
 }

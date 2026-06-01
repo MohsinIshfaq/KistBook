@@ -9,19 +9,23 @@ import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../core/utils/id_generator.dart';
 import '../../services/background_service.dart';
+import '../../services/auth_api_service.dart';
 
 class UserController extends GetxController {
   UserController({
     required UserRepository userRepository,
     required CustomerRepository customerRepository,
     required InstallmentRepository installmentRepository,
+    required AuthApiService authApiService,
   }) : _userRepository = userRepository,
        _customerRepository = customerRepository,
-       _installmentRepository = installmentRepository;
+       _installmentRepository = installmentRepository,
+       _authApiService = authApiService;
 
   final UserRepository _userRepository;
   final CustomerRepository _customerRepository;
   final InstallmentRepository _installmentRepository;
+  final AuthApiService _authApiService;
 
   List<LocalUserModel> users = [];
   List<CustomerModel> customers = [];
@@ -110,32 +114,58 @@ class UserController extends GetxController {
   Future<void> saveUser({
     LocalUserModel? existing,
     required String phone,
+    required String email,
     required String password,
+    required String passwordConfirmation,
     required String firstName,
     required String lastName,
-    required UserRole role,
   }) async {
     final existingPhoneUser = await _userRepository.findByPhone(phone);
     if (existingPhoneUser != null && existingPhoneUser.uuid != existing?.uuid) {
       throw StateError('Phone number already exists');
     }
-    final now = DateTime.now();
-    final user = LocalUserModel(
-      id: existing?.id,
-      uuid: existing?.uuid ?? IdGenerator.localUuid(),
-      phone: phone,
-      password: password,
-      firstName: firstName,
-      lastName: lastName,
-      role: role,
-      isActive: true,
-      isSync: false,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    );
-    await _userRepository.saveUser(user);
-    _requestSync();
-    await loadUsers();
+    final existingEmailUser = await _userRepository.findByEmail(email);
+    if (existingEmailUser != null && existingEmailUser.uuid != existing?.uuid) {
+      throw StateError('Email address already exists');
+    }
+    isLoading = true;
+    update();
+    try {
+      final now = DateTime.now();
+      var uuid = existing?.uuid ?? IdGenerator.localUuid();
+      var isSync = false;
+      if (existing == null) {
+        final remote = await _authApiService.createCompanyUser(
+          name: '$firstName $lastName'.trim(),
+          email: email,
+          phone: phone,
+          password: password,
+          passwordConfirmation: passwordConfirmation,
+        );
+        uuid = remote.serverId.isEmpty ? uuid : remote.serverId;
+        isSync = true;
+      }
+      final user = LocalUserModel(
+        id: existing?.id,
+        uuid: uuid,
+        phone: phone,
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        role: UserRole.salesMan,
+        isActive: true,
+        isSync: isSync,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      );
+      await _userRepository.saveUser(user);
+      _requestSync();
+      await loadUsers();
+    } finally {
+      isLoading = false;
+      update();
+    }
   }
 
   Future<void> deleteUser(int userId) async {

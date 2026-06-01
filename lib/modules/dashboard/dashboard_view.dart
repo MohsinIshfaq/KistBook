@@ -9,6 +9,7 @@ import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/metric_card.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../services/session_manager.dart';
+import '../auth/auth_controller.dart';
 import 'dashboard_controller.dart';
 
 class DashboardView extends GetView<DashboardController> {
@@ -17,6 +18,7 @@ class DashboardView extends GetView<DashboardController> {
   @override
   Widget build(BuildContext context) {
     final session = Get.find<SessionManager>();
+    final authController = Get.find<AuthController>();
     final isOwner = session.role == UserRole.owner;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -41,6 +43,8 @@ class DashboardView extends GetView<DashboardController> {
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              Obx(() => _profileSummary(context, session, authController)),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -75,7 +79,10 @@ class DashboardView extends GetView<DashboardController> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                (isOwner ? 'Business Overview' : 'Assigned Collection Overview').tr,
+                                (isOwner
+                                        ? 'Business Overview'
+                                        : 'Assigned Collection Overview')
+                                    .tr,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -103,11 +110,16 @@ class DashboardView extends GetView<DashboardController> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _heroChip('Outstanding'.tr, snapshot.totalOutstandingLabel),
+                        _heroChip(
+                          'Outstanding'.tr,
+                          snapshot.totalOutstandingLabel,
+                        ),
                         _heroChip('Collected'.tr, snapshot.totalCollectedLabel),
                         _heroChip(
                           'Pending Today'.tr,
-                          '@count items'.trParams({'count': '${snapshot.dueToday.length}'}),
+                          '@count items'.trParams({
+                            'count': '${snapshot.dueToday.length}',
+                          }),
                         ),
                       ],
                     ),
@@ -141,7 +153,11 @@ class DashboardView extends GetView<DashboardController> {
                     label: 'Collected'.tr,
                     value: snapshot.totalCollectedLabel,
                     accent: AppColors.success,
-                    caption: (isOwner ? 'Tracked receipts only' : 'Your tracked receipts').tr,
+                    caption:
+                        (isOwner
+                                ? 'Tracked receipts only'
+                                : 'Your tracked receipts')
+                            .tr,
                   ),
                 ],
               ),
@@ -157,11 +173,17 @@ class DashboardView extends GetView<DashboardController> {
                           Expanded(
                             child: Text(
                               'Today Alerts'.tr,
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: isDark
                                   ? Colors.white.withValues(alpha: 0.08)
@@ -169,8 +191,9 @@ class DashboardView extends GetView<DashboardController> {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              '@count active'
-                                  .trParams({'count': '${snapshot.dueToday.length}'}),
+                              '@count active'.trParams({
+                                'count': '${snapshot.dueToday.length}',
+                              }),
                             ),
                           ),
                         ],
@@ -195,7 +218,9 @@ class DashboardView extends GetView<DashboardController> {
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: AppColors.warning.withValues(alpha: 0.15),
+                                    color: AppColors.warning.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: const Icon(
@@ -206,7 +231,8 @@ class DashboardView extends GetView<DashboardController> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         detail.customer.name,
@@ -216,7 +242,10 @@ class DashboardView extends GetView<DashboardController> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(detail.product?.name ?? detail.plan.itemName),
+                                      Text(
+                                        detail.product?.name ??
+                                            detail.plan.itemName,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -234,7 +263,9 @@ class DashboardView extends GetView<DashboardController> {
                                     AppRoutes.paymentForm,
                                     arguments: detail,
                                   ),
-                                  icon: const Icon(Icons.arrow_forward_ios_rounded),
+                                  icon: const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                  ),
                                 ),
                               ],
                             ),
@@ -290,6 +321,87 @@ class DashboardView extends GetView<DashboardController> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _profileSummary(
+    BuildContext context,
+    SessionManager session,
+    AuthController authController,
+  ) {
+    final profile = authController.currentUser.value;
+    final name = profile?.fullName ?? session.fullName;
+    final contact = [
+      profile?.phone ?? session.phone,
+      profile?.email ?? session.email,
+    ].where((value) => value.isNotEmpty).join(' • ');
+    final role = profile?.role ?? session.role;
+
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (authController.isProfileLoading.value)
+            const LinearProgressIndicator(minHeight: 2),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name.isEmpty ? 'Signed-in user'.tr : name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      if (contact.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(contact),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    role.label,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

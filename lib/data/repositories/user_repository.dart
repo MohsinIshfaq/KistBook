@@ -24,6 +24,28 @@ class UserRepository extends GenericRepository<LocalUserModel> {
     return findOneBy('phone', phone);
   }
 
+  Future<LocalUserModel?> findByEmail(String email) async {
+    final database = await db;
+    final rows = await database.query(
+      DbConstants.users,
+      where: 'LOWER(email) = ? AND is_deleted = 0',
+      whereArgs: [email.toLowerCase()],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : LocalUserModel.fromMap(rows.first);
+  }
+
+  Future<LocalUserModel?> findByLogin(String login) async {
+    final database = await db;
+    final rows = await database.query(
+      DbConstants.users,
+      where: '(phone = ? OR LOWER(email) = ?) AND is_deleted = 0',
+      whereArgs: [login, login.toLowerCase()],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : LocalUserModel.fromMap(rows.first);
+  }
+
   Future<bool> hasUsers() async => (await fetchUsers()).isNotEmpty;
 
   Future<bool> hasOwner() async {
@@ -39,6 +61,7 @@ class UserRepository extends GenericRepository<LocalUserModel> {
 
   Future<LocalUserModel> createOwner({
     required String phone,
+    required String email,
     required String password,
     required String firstName,
     required String lastName,
@@ -47,6 +70,7 @@ class UserRepository extends GenericRepository<LocalUserModel> {
     final user = LocalUserModel(
       uuid: IdGenerator.localUuid(),
       phone: phone,
+      email: email,
       password: password,
       firstName: firstName,
       lastName: lastName,
@@ -61,6 +85,7 @@ class UserRepository extends GenericRepository<LocalUserModel> {
       id: id,
       uuid: user.uuid,
       phone: user.phone,
+      email: user.email,
       password: user.password,
       firstName: user.firstName,
       lastName: user.lastName,

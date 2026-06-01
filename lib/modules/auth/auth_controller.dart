@@ -1,7 +1,13 @@
 import 'package:get/get.dart';
 
-import '../../core/constants/app_enums.dart';
+import '../../app/routes/app_routes.dart';
+import '../../core/services/api_services.dart';
+import '../../core/utils/id_generator.dart';
+import '../../core/widgets/banner_alert.dart';
+import '../../data/models/company_model.dart';
 import '../../data/models/local_user_model.dart';
+import '../../data/models/login_response_model.dart';
+import '../../data/models/user_model.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../services/auth_api_service.dart';
 import '../../services/background_service.dart';
@@ -20,13 +26,24 @@ class AuthController extends GetxController {
   final SessionManager _sessionManager;
   final AuthApiService _authApiService;
 
-  bool isSubmitting = false;
+  final RxBool isLoginLoading = false.obs;
+  final RxBool isSignupLoading = false.obs;
+  final RxBool isProfileLoading = false.obs;
+  final RxBool isLogoutLoading = false.obs;
+  final Rxn<UserModel> currentUser = Rxn<UserModel>();
+  final RxString errorMessage = ''.obs;
+
   bool hasUsers = true;
   bool hasOwner = false;
+
+  bool get isSubmitting => isLoginLoading.value || isSignupLoading.value;
 
   @override
   void onInit() {
     super.onInit();
+    if (_sessionManager.userData.isNotEmpty) {
+      currentUser.value = UserModel.fromJson(_sessionManager.userData);
+    }
     loadState();
   }
 
@@ -37,149 +54,345 @@ class AuthController extends GetxController {
   }
 
   Future<LocalUserModel?> login({
-    required String phone,
+    required String login,
     required String password,
+    bool rememberMe = true,
   }) async {
-    isSubmitting = true;
-    update();
-    final user = await _userRepository.findByPhone(phone);
-    if (user != null && user.isActive && user.password == password) {
-      await _sessionManager.saveData(user);
-      await _connectRemoteAccount(user, password);
-      await Get.find<BackgroundService>().start();
-      isSubmitting = false;
-      update();
-      return user;
-    }
-
-    final remote = await _authApiService.login(
-      phone: phone,
-      password: password,
-    );
-    if (remote == null || !remote.isActive) {
-      isSubmitting = false;
-      update();
+    errorMessage.value = '';
+    final normalizedLogin = login.trim();
+    if (normalizedLogin.isEmpty || password.trim().isEmpty) {
+      errorMessage.value = 'Email or phone number and password are required.';
       return null;
     }
 
-    final syncedUser = await _saveRemoteUser(
-      remote,
-      password: password,
-      existing: user,
-    );
-    await _sessionManager.saveData(syncedUser);
-    await Get.find<BackgroundService>().start();
-    isSubmitting = false;
+    isLoginLoading.value = true;
     update();
-    return syncedUser;
+    try {
+      await _sessionManager.saveRememberedLogin(
+        remember: rememberMe,
+        phone: normalizedLogin,
+      );
+      final localUser = await _userRepository.findByLogin(normalizedLogin);
+      if (localUser != null &&
+          localUser.isActive &&
+          localUser.password == password) {
+        await _sessionManager.saveData(localUser);
+        currentUser.value = UserModel.fromJson(_sessionManager.userData);
+        await _connectRemoteAccount(localUser, password);
+        await _completeLogin();
+        return localUser;
+      }
+
+      final remote = await _authApiService.login(
+        login: normalizedLogin,
+        password: password,
+      );
+      if (!remote.isValid) {
+        errorMessage.value =
+            'The server returned incomplete login information. Please try again.';
+        return null;
+      }
+      if (remote.user!.isActive == false) {
+        errorMessage.value = 'This user account is inactive.';
+        return null;
+      }
+
+      final syncedUser = await _saveRemoteUser(
+        remote,
+        password: password,
+        existing: localUser,
+      );
+      await _sessionManager.saveData(syncedUser);
+      await _saveRemoteSession(remote, syncedUser);
+      await _completeLogin();
+      return syncedUser;
+    } on ApiException catch (error) {
+      errorMessage.value = error.displayMessages.join('\n');
+      return null;
+    } catch (_) {
+      errorMessage.value =
+          'The server returned an invalid response. Please try again.';
+      return null;
+    } finally {
+      isLoginLoading.value = false;
+      update();
+    }
+  }
+
+  Future<LocalUserModel?> register({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+    required String companyName,
+    String? companyPhone,
+    String? companyAddress,
+  }) async {
+    errorMessage.value = '';
+    if (name.trim().isEmpty ||
+        email.trim().isEmpty ||
+        phone.trim().isEmpty ||
+        password.isEmpty ||
+        companyName.trim().isEmpty) {
+      errorMessage.value = 'Please complete all required signup fields.';
+      return null;
+    }
+    if (password != passwordConfirmation) {
+      errorMessage.value = 'Password and confirm password must match.';
+      return null;
+    }
+
+    isSignupLoading.value = true;
+    update();
+    try {
+      final remote = await _authApiService.registerOwner(
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        companyName: companyName.trim(),
+        companyPhone: companyPhone?.trim(),
+        companyAddress: companyAddress?.trim(),
+      );
+      if (!remote.isValid) {
+        errorMessage.value =
+            'The server returned incomplete account information. Please try again.';
+        return null;
+      }
+
+      final existing = await _userRepository.findByPhone(phone.trim());
+      final user = await _saveUserModel(
+        remote.user!,
+        password: password,
+        existing: existing,
+      );
+      await _sessionManager.saveData(user);
+      await _saveAuthSession(
+        token: remote.token,
+        user: remote.user!,
+        company: remote.company,
+        rawResponse: remote.rawResponse,
+        localUser: user,
+      );
+      await _completeLogin();
+      hasUsers = true;
+      hasOwner = true;
+      return user;
+    } on ApiException catch (error) {
+      errorMessage.value = error.displayMessages.join('\n');
+      return null;
+    } catch (_) {
+      errorMessage.value =
+          'The server returned an invalid response. Please try again.';
+      return null;
+    } finally {
+      isSignupLoading.value = false;
+      update();
+    }
+  }
+
+  Future<void> fetchProfile() async {
+    if (!_sessionManager.hasApiSession || isProfileLoading.value) {
+      return;
+    }
+
+    isProfileLoading.value = true;
+    errorMessage.value = '';
+    update();
+    try {
+      final response = await _authApiService.getProfile();
+      if (!response.isValid) {
+        errorMessage.value =
+            'The server returned incomplete profile information. Please try again.';
+        showBannerAlert(
+          type: BannerStyle.warning,
+          title: 'Profile Refresh Failed'.tr,
+          messages: [errorMessage.value],
+        );
+        return;
+      }
+      final user = response.user!;
+      currentUser.value = user;
+      await _sessionManager.updateProfileData(
+        user: user,
+        company: response.company,
+      );
+    } on ApiException catch (error) {
+      errorMessage.value = error.message;
+      if (error.isUnauthorized) {
+        await _clearLocalSession();
+        Get.offAllNamed(AppRoutes.login);
+        showBannerAlert(
+          type: BannerStyle.warning,
+          title: 'Session Expired'.tr,
+          messages: ['Your session has expired. Please log in again.'.tr],
+        );
+      } else {
+        showBannerAlert(
+          type: BannerStyle.warning,
+          title: 'Profile Refresh Failed'.tr,
+          messages: error.displayMessages,
+        );
+      }
+    } catch (_) {
+      errorMessage.value =
+          'The server returned an invalid response. Please try again.';
+      showBannerAlert(
+        type: BannerStyle.warning,
+        title: 'Profile Refresh Failed'.tr,
+        messages: [errorMessage.value],
+      );
+    } finally {
+      isProfileLoading.value = false;
+      update();
+    }
   }
 
   Future<void> logout() async {
-    Get.find<BackgroundService>().dispose();
-    await _sessionManager.clearSettings();
-  }
+    if (isLogoutLoading.value) {
+      return;
+    }
+    isLogoutLoading.value = true;
+    errorMessage.value = '';
+    update();
+    String? warning;
+    try {
+      if (_sessionManager.hasApiSession) {
+        await _authApiService.logout();
+      }
+    } on ApiException catch (error) {
+      if (!error.isUnauthorized) {
+        warning = error.message;
+      }
+    } catch (_) {
+      warning = 'The server returned an invalid response.';
+    } finally {
+      await _clearLocalSession();
+      isLogoutLoading.value = false;
+      update();
+      Get.offAllNamed(AppRoutes.login);
+    }
 
-  Future<LocalUserModel?> registerOwner({
-    required String phone,
-    required String password,
-    required String firstName,
-    required String lastName,
-  }) async {
-    isSubmitting = true;
-    update();
-    if (await _userRepository.hasOwner()) {
-      hasUsers = true;
-      hasOwner = true;
-      isSubmitting = false;
-      update();
-      return null;
+    if (warning != null) {
+      showBannerAlert(
+        type: BannerStyle.warning,
+        title: 'Logged Out'.tr,
+        messages: ['You were logged out on this device. $warning'],
+      );
     }
-    final existing = await _userRepository.findByPhone(phone);
-    if (existing != null) {
-      isSubmitting = false;
-      update();
-      return null;
-    }
-    final user = await _userRepository.createOwner(
-      phone: phone,
-      password: password,
-      firstName: firstName,
-      lastName: lastName,
-    );
-    final remote =
-        await _authApiService.registerOwner(
-          phone: phone,
-          password: password,
-          firstName: firstName,
-          lastName: lastName,
-        ) ??
-        await _authApiService.login(phone: phone, password: password);
-    if (remote != null) {
-      await _saveRemoteSession(remote, user);
-    }
-    await _sessionManager.saveData(user);
-    await Get.find<BackgroundService>().start();
-    hasUsers = true;
-    hasOwner = true;
-    isSubmitting = false;
-    update();
-    return user;
   }
 
   Future<void> _connectRemoteAccount(
     LocalUserModel user,
     String password,
   ) async {
-    final remote =
-        await _authApiService.login(phone: user.phone, password: password) ??
-        (user.role == UserRole.owner
-            ? await _authApiService.registerOwner(
-                phone: user.phone,
-                password: password,
-                firstName: user.firstName,
-                lastName: user.lastName,
-              )
-            : null);
-    if (remote == null) {
-      return;
+    try {
+      final remote = await _authApiService.login(
+        login: user.phone,
+        password: password,
+      );
+      if (remote.isValid) {
+        await _saveRemoteSession(remote, user);
+      }
+    } catch (_) {
+      // Local login remains available while the server is unreachable.
     }
-    await _saveRemoteSession(remote, user);
   }
 
   Future<LocalUserModel> _saveRemoteUser(
-    AuthApiResult remote, {
+    LoginResponseModel remote, {
+    required String password,
+    LocalUserModel? existing,
+  }) {
+    return _saveUserModel(remote.user!, password: password, existing: existing);
+  }
+
+  Future<LocalUserModel> _saveUserModel(
+    UserModel remoteUser, {
     required String password,
     LocalUserModel? existing,
   }) async {
     final now = DateTime.now();
+    final remoteServerId = remoteUser.serverId;
+    final names = _splitName(remoteUser.fullName);
     final user = LocalUserModel(
       id: existing?.id,
-      uuid: existing?.uuid ?? remote.serverId,
-      phone: remote.phone,
+      uuid:
+          existing?.uuid ??
+          (remoteServerId.isNotEmpty
+              ? remoteServerId
+              : IdGenerator.localUuid()),
+      phone: remoteUser.phone ?? '',
+      email: remoteUser.email ?? '',
       password: password,
-      firstName: remote.firstName,
-      lastName: remote.lastName,
-      role: remote.role,
-      isActive: remote.isActive,
+      firstName: remoteUser.firstName ?? names.$1,
+      lastName: remoteUser.lastName ?? names.$2,
+      role: remoteUser.role,
+      isActive: remoteUser.isActive != false,
       isSync: true,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     );
     final saved = await _userRepository.saveUser(user);
-    await _saveRemoteSession(remote, saved);
     return saved.copyWith(isSync: true);
   }
 
   Future<void> _saveRemoteSession(
-    AuthApiResult remote,
+    LoginResponseModel remote,
     LocalUserModel user,
-  ) async {
-    await _sessionManager.saveApiSession(token: remote.token);
-    if (user.id != null && remote.serverId.isNotEmpty) {
+  ) {
+    return _saveAuthSession(
+      token: remote.token,
+      user: remote.user!,
+      company: remote.company,
+      rawResponse: remote.rawResponse,
+      localUser: user,
+    );
+  }
+
+  Future<void> _saveAuthSession({
+    required String token,
+    required UserModel user,
+    required LocalUserModel localUser,
+    CompanyModel? company,
+    Map<String, dynamic>? rawResponse,
+  }) async {
+    if (token.trim().isEmpty || user.isEmpty) {
+      return;
+    }
+    await _sessionManager.saveAuthData(
+      token: token,
+      user: user,
+      company: company,
+      loginResponse: rawResponse,
+    );
+    currentUser.value = user;
+    if (localUser.id != null && user.serverId.isNotEmpty) {
       await _userRepository.markServerIdentity(
-        userId: user.id!,
-        serverId: remote.serverId,
+        userId: localUser.id!,
+        serverId: user.serverId,
       );
     }
+  }
+
+  (String, String) _splitName(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) {
+      return ('', '');
+    }
+    return (parts.first, parts.skip(1).join(' '));
+  }
+
+  Future<void> _completeLogin() async {
+    await Get.find<BackgroundService>().start();
+    Get.offAllNamed(_sessionManager.homeRoute);
+  }
+
+  Future<void> _clearLocalSession() async {
+    Get.find<BackgroundService>().dispose();
+    await _sessionManager.clearAuthData();
+    currentUser.value = null;
   }
 }

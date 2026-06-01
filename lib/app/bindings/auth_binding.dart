@@ -5,12 +5,6 @@ import '../../modules/auth/auth_controller.dart';
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(
-      () => AuthController(
-        userRepository: Get.find(),
-        sessionManager: Get.find(),
-        authApiService: Get.find(),
-      ),
-    );
+    Get.find<AuthController>();
   }
 }

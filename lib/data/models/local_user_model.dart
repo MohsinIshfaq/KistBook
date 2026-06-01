@@ -7,6 +7,7 @@ class LocalUserModel implements BaseModel {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uuid TEXT NOT NULL UNIQUE,
       phone TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL DEFAULT '',
       password TEXT NOT NULL,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
@@ -22,6 +23,7 @@ class LocalUserModel implements BaseModel {
     this.id,
     required this.uuid,
     required this.phone,
+    this.email = '',
     required this.password,
     required this.firstName,
     required this.lastName,
@@ -36,6 +38,7 @@ class LocalUserModel implements BaseModel {
   final int? id;
   final String uuid;
   final String phone;
+  final String email;
   final String password;
   final String firstName;
   final String lastName;
@@ -51,6 +54,7 @@ class LocalUserModel implements BaseModel {
     int? id,
     String? uuid,
     String? phone,
+    String? email,
     String? password,
     String? firstName,
     String? lastName,
@@ -64,6 +68,7 @@ class LocalUserModel implements BaseModel {
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
       phone: phone ?? this.phone,
+      email: email ?? this.email,
       password: password ?? this.password,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
@@ -77,18 +82,19 @@ class LocalUserModel implements BaseModel {
 
   @override
   Map<String, Object?> toMap() => {
-        'id': id,
-        'uuid': uuid,
-        'phone': phone,
-        'password': password,
-        'first_name': firstName,
-        'last_name': lastName,
-        'role': role.name,
-        'is_active': isActive ? 1 : 0,
-        'is_sync': isSync ? 1 : 0,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'uuid': uuid,
+    'phone': phone,
+    'email': email,
+    'password': password,
+    'first_name': firstName,
+    'last_name': lastName,
+    'role': role.name,
+    'is_active': isActive ? 1 : 0,
+    'is_sync': isSync ? 1 : 0,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   @override
   String get uniqueKey => 'uuid';
@@ -97,19 +103,20 @@ class LocalUserModel implements BaseModel {
   Object? get uniqueKeyValue => uuid;
 
   factory LocalUserModel.fromMap(Map<String, Object?> map) => LocalUserModel(
-        id: map['id'] as int?,
-        uuid: map['uuid'] as String? ?? '',
-        phone: map['phone'] as String? ?? '',
-        password: map['password'] as String? ?? '',
-        firstName: map['first_name'] as String? ?? '',
-        lastName: map['last_name'] as String? ?? '',
-        role: UserRole.values.firstWhere(
-          (item) => item.name == (map['role'] as String? ?? ''),
-          orElse: () => UserRole.salesMan,
-        ),
-        isActive: (map['is_active'] as num?)?.toInt() == 1,
-        isSync: (map['is_sync'] as num?)?.toInt() == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-      );
+    id: map['id'] as int?,
+    uuid: map['uuid'] as String? ?? '',
+    phone: map['phone'] as String? ?? '',
+    email: map['email'] as String? ?? '',
+    password: map['password'] as String? ?? '',
+    firstName: map['first_name'] as String? ?? '',
+    lastName: map['last_name'] as String? ?? '',
+    role: UserRole.values.firstWhere(
+      (item) => item.name == (map['role'] as String? ?? ''),
+      orElse: () => UserRole.salesMan,
+    ),
+    isActive: (map['is_active'] as num?)?.toInt() == 1,
+    isSync: (map['is_sync'] as num?)?.toInt() == 1,
+    createdAt: DateTime.parse(map['created_at'] as String),
+    updatedAt: DateTime.parse(map['updated_at'] as String),
+  );
 }

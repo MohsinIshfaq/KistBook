@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PlanStatus;
+use App\Traits\BelongsToCompany;
 use App\Traits\HasUuid;
 use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Plan extends Model
 {
+    use BelongsToCompany;
     use HasFactory;
     use HasUuid;
     use LogsSyncChanges;
@@ -21,6 +23,7 @@ class Plan extends Model
 
     protected $fillable = [
         'uuid',
+        'company_id',
         'customer_uuid',
         'product_uuid',
         'quantity',

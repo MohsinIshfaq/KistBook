@@ -17,6 +17,7 @@ class PaymentSeeder extends Seeder
 
         Installment::query()->take(5)->get()->each(function (Installment $installment) use ($service, $user): void {
             $service->create([
+                'company_id' => $user->company_id,
                 'operation_uuid' => (string) Str::uuid(),
                 'customer_uuid' => $installment->plan->customer_uuid,
                 'plan_uuid' => $installment->plan_uuid,

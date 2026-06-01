@@ -12,9 +12,7 @@ use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
-    public function __construct(private readonly PaymentServiceInterface $payments)
-    {
-    }
+    public function __construct(private readonly PaymentServiceInterface $payments) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -24,7 +22,7 @@ class PaymentController extends Controller
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $payload = $request->validated();
-        $payload['created_by'] = $payload['created_by'] ?? $request->user()->uuid;
+        $payload['created_by'] = $request->user()->uuid;
 
         return $this->successResponse(new PaymentResource($this->payments->create($payload)), 'Payment created successfully.', 201);
     }

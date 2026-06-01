@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Contracts\Services\PlanServiceInterface;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
@@ -14,6 +15,7 @@ class PlanSeeder extends Seeder
         $service = app(PlanServiceInterface::class);
         $customers = Customer::query()->take(5)->get();
         $products = Product::query()->take(5)->get();
+        $companyId = User::query()->where('phone', '03000000001')->value('company_id');
 
         foreach ($customers as $index => $customer) {
             $product = $products[$index % $products->count()];
@@ -24,6 +26,7 @@ class PlanSeeder extends Seeder
             $installmentCount = 6;
 
             $service->create([
+                'company_id' => $companyId,
                 'customer_uuid' => $customer->uuid,
                 'product_uuid' => $product->uuid,
                 'quantity' => $quantity,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
 use App\Traits\HasUuid;
 use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Model;
@@ -10,12 +11,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductImage extends Model
 {
+    use BelongsToCompany;
     use HasUuid;
     use LogsSyncChanges;
     use SoftDeletes;
 
     protected $fillable = [
         'uuid',
+        'company_id',
         'product_uuid',
         'disk',
         'path',

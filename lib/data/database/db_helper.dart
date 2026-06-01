@@ -168,6 +168,13 @@ class DbHelper {
         if (oldVersion < 12) {
           await _ensureSyncMetadata(db);
         }
+        if (oldVersion < 13) {
+          await _addColumnIfMissing(
+            db,
+            DbConstants.users,
+            "email TEXT NOT NULL DEFAULT ''",
+          );
+        }
       },
     );
 

@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Contracts\Repositories\InstallmentRepositoryInterface;
 use App\Contracts\Repositories\PaymentRepositoryInterface;
 use App\Contracts\Services\PaymentServiceInterface;
+use App\Models\Customer;
 use App\Models\Installment;
 use App\Models\Payment;
+use App\Models\Plan;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +17,7 @@ class PaymentService implements PaymentServiceInterface
     public function __construct(
         private readonly PaymentRepositoryInterface $payments,
         private readonly InstallmentRepositoryInterface $installments,
-    ) {
-    }
+    ) {}
 
     public function list(int $perPage = 15): LengthAwarePaginator
     {
@@ -25,6 +26,8 @@ class PaymentService implements PaymentServiceInterface
 
     public function create(array $data): Payment
     {
+        $this->validateRelatedRecords($data);
+
         $existingPayment = $this->payments->findByOperationUuid($data['operation_uuid']);
 
         if ($existingPayment) {
@@ -47,6 +50,8 @@ class PaymentService implements PaymentServiceInterface
 
     public function update(string $uuid, array $data): Payment
     {
+        $this->validateRelatedRecords($data);
+
         return DB::transaction(function () use ($uuid, $data): Payment {
             /** @var Payment $payment */
             $payment = $this->payments->findByUuidOrFail($uuid, ['installment']);
@@ -62,6 +67,21 @@ class PaymentService implements PaymentServiceInterface
 
             return $payment->load(['customer', 'plan', 'installment', 'creator']);
         });
+    }
+
+    private function validateRelatedRecords(array $data): void
+    {
+        if (isset($data['customer_uuid'])) {
+            Customer::query()->where('uuid', $data['customer_uuid'])->firstOrFail();
+        }
+
+        if (isset($data['plan_uuid'])) {
+            Plan::query()->where('uuid', $data['plan_uuid'])->firstOrFail();
+        }
+
+        if (isset($data['installment_uuid'])) {
+            Installment::query()->where('uuid', $data['installment_uuid'])->firstOrFail();
+        }
     }
 
     public function delete(string $uuid): void

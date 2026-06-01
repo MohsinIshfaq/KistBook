@@ -132,6 +132,9 @@ class SyncService
         }
 
         $model = $this->findExistingModel($tableName, $row);
+        if ($tableName === 'users') {
+            $this->authorizeUserSyncTarget($actor, $model);
+        }
         if (($row['is_deleted'] ?? false) === true) {
             if ($model !== null) {
                 $this->markDeleted($model);
@@ -205,18 +208,11 @@ class SyncService
         User $actor,
         ?Model $model,
     ): array {
+        if ($tableName === 'users') {
+            return $this->normalizeUserUploadData($row, $actor, $model);
+        }
+
         $data = match ($tableName) {
-            'users' => $this->only($row, [
-                'uuid',
-                'phone',
-                'email',
-                'password',
-                'first_name',
-                'last_name',
-                'access_level',
-                'is_active',
-                'is_deleted',
-            ]),
             'customers' => $this->only($row, [
                 'card_no',
                 'name',
@@ -276,11 +272,51 @@ class SyncService
             default => [],
         };
 
-        if ($tableName === 'users' && $model !== null && empty($data['password'])) {
+        return $data;
+    }
+
+    private function normalizeUserUploadData(array $row, User $actor, ?Model $model): array
+    {
+        $model = $this->authorizeUserSyncTarget($actor, $model);
+        $data = $this->only($row, [
+            'phone',
+            'email',
+            'password',
+            'first_name',
+            'last_name',
+            'is_active',
+            'is_deleted',
+        ]);
+        $data['name'] = trim(implode(' ', array_filter([
+            $data['first_name'] ?? $model->first_name,
+            $data['last_name'] ?? $model->last_name,
+        ])));
+        $data['role'] = AccessLevel::Salesman;
+        $data['access_level'] = AccessLevel::Salesman;
+        $data['status'] = ($data['is_active'] ?? $model->is_active) ? 'active' : 'inactive';
+
+        if (empty($data['password'])) {
             unset($data['password']);
         }
 
         return $data;
+    }
+
+    private function authorizeUserSyncTarget(User $actor, ?Model $model): User
+    {
+        if (! $actor->isOwner() || $actor->company_id === null) {
+            throw new \RuntimeException('Only an owner can manage company users.');
+        }
+
+        if (! $model instanceof User) {
+            throw new \RuntimeException('Create salesman users with the company users endpoint.');
+        }
+
+        if ($model->company_id !== $actor->company_id || $model->isOwner()) {
+            throw new \RuntimeException('You can only manage salesmen in your own company.');
+        }
+
+        return $model;
     }
 
     private function productImageData(array $row, ?Model $model): array
@@ -328,7 +364,7 @@ class SyncService
             'is_deleted',
         ]);
         $data['operation_uuid'] = $data['operation_uuid'] ?? (string) Str::uuid();
-        $data['created_by'] = $data['created_by'] ?? $actor->uuid;
+        $data['created_by'] = $actor->uuid;
         $data['source'] = $data['source'] ?? 'mobile';
 
         return $data;
@@ -398,6 +434,8 @@ class SyncService
 
         return $base + match ($tableName) {
             'users' => [
+                'company_id' => $model->company_id,
+                'name' => $model->name,
                 'phone' => $model->phone,
                 'email' => $model->email,
                 'first_name' => $model->first_name,
@@ -405,6 +443,10 @@ class SyncService
                 'access_level' => $model->access_level instanceof AccessLevel
                     ? $model->access_level->value
                     : $model->access_level,
+                'role' => $model->role instanceof AccessLevel
+                    ? $model->role->value
+                    : $model->role,
+                'status' => $model->status,
                 'is_active' => (bool) $model->is_active,
             ],
             'customers' => $this->modelOnly($model, ['card_no', 'name', 'phone', 'cnic', 'address', 'reference']),
@@ -510,12 +552,23 @@ class SyncService
 
     private function scopeForActor(Builder $query, string $tableName, User $actor): void
     {
-        if ($actor->access_level !== AccessLevel::Salesman) {
+        if ($tableName === 'users') {
+            if ($actor->isSalesman() || $actor->company_id === null) {
+                $query->where('uuid', $actor->uuid);
+
+                return;
+            }
+
+            $query->where('company_id', $actor->company_id);
+
+            return;
+        }
+
+        if (! $actor->isSalesman()) {
             return;
         }
 
         match ($tableName) {
-            'users' => $query->where('uuid', $actor->uuid),
             'customers' => $query->whereIn('uuid', $this->assignedCustomerUuids($actor)),
             'plans' => $query->whereIn('uuid', $this->assignedPlanUuids($actor)),
             'installments' => $query->whereIn('plan_uuid', $this->assignedPlanUuids($actor)),

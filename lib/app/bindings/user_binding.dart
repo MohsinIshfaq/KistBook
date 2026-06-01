@@ -10,6 +10,7 @@ class UserBinding extends Bindings {
         userRepository: Get.find(),
         customerRepository: Get.find(),
         installmentRepository: Get.find(),
+        authApiService: Get.find(),
       ),
     );
   }
