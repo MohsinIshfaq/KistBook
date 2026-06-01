@@ -2,11 +2,25 @@
 
 namespace App\Http\Requests\Installments;
 
+use App\Http\Requests\Concerns\NormalizesCamelCaseInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreInstallmentRequest extends FormRequest
 {
+    use NormalizesCamelCaseInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->mergeCamelCaseAliases([
+            'plan_uuid' => 'planId',
+            'sequence_number' => 'sequenceNumber',
+            'scheduled_due_date' => 'scheduledDueDate',
+            'current_due_date' => 'currentDueDate',
+            'paid_amount' => 'paidAmount',
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;

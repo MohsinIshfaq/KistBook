@@ -8,6 +8,7 @@ use App\Traits\LogsSyncChanges;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -26,6 +27,8 @@ class Product extends Model
         'product_name',
         'code',
         'sales_price',
+        'base_price',
+        'primary_category_uuid',
         'notes',
         'is_deleted',
     ];
@@ -34,6 +37,7 @@ class Product extends Model
     {
         return [
             'sales_price' => 'decimal:2',
+            'base_price' => 'decimal:2',
             'is_deleted' => 'boolean',
         ];
     }
@@ -54,5 +58,15 @@ class Product extends Model
         return $this->hasMany(ProductImage::class, 'product_uuid', 'uuid')
             ->orderBy('sort_order')
             ->orderBy('id');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_uuid', 'uuid');
+    }
+
+    public function primaryCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'primary_category_uuid', 'uuid');
     }
 }

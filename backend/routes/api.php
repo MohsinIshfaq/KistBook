@@ -5,11 +5,14 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CompanyUserController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerSyncController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InstallmentController;
+use App\Http\Controllers\Api\InstallmentPlanController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductSyncController;
 use App\Http\Controllers\Api\SyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,13 +24,22 @@ Route::prefix('auth')->group(function (): void {
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/profile', [AuthController::class, 'me']);
+    Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
     Route::get('me', [AuthController::class, 'me']);
     Route::post('company/users', [CompanyUserController::class, 'store']);
 
-    Route::apiResource('customers', CustomerController::class)->parameter('customers', 'uuid');
-    Route::apiResource('products', ProductController::class)->parameter('products', 'uuid');
-    Route::post('products/{uuid}', [ProductController::class, 'update']);
+    Route::get('customers/sync', [CustomerSyncController::class, 'download']);
+    Route::post('customers/sync', [CustomerSyncController::class, 'create']);
+    Route::put('customers/sync', [CustomerSyncController::class, 'update']);
+    Route::delete('customers/sync', [CustomerSyncController::class, 'delete']);
+    Route::get('customers/{uuid}', [CustomerController::class, 'show']);
+    Route::get('products/sync', [ProductSyncController::class, 'download']);
+    Route::post('products/sync', [ProductSyncController::class, 'create']);
+    Route::put('products/sync', [ProductSyncController::class, 'update']);
+    Route::delete('products/sync', [ProductSyncController::class, 'delete']);
+    Route::get('products/{uuid}', [ProductController::class, 'show']);
     Route::apiResource('categories', CategoryController::class)->parameter('categories', 'uuid');
+    Route::apiResource('installment-plans', InstallmentPlanController::class)->parameter('installment-plans', 'uuid');
     Route::apiResource('plans', PlanController::class)->parameter('plans', 'uuid');
     Route::apiResource('installments', InstallmentController::class)->parameter('installments', 'uuid');
     Route::apiResource('payments', PaymentController::class)->parameter('payments', 'uuid');

@@ -17,7 +17,7 @@ class UpdateCategoryRequest extends FormRequest
         $uuid = $this->route('uuid');
 
         return [
-            'name' => ['sometimes', 'string', 'max:255', Rule::unique('product_categories', 'name')->ignore($uuid, 'uuid')],
+            'name' => ['sometimes', 'string', 'max:255', Rule::unique('product_categories', 'name')->where('company_id', $this->user()?->company_id)->ignore($uuid, 'uuid')],
         ];
     }
 }

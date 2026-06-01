@@ -11,20 +11,22 @@ class ProductResource extends JsonResource
     {
         return [
             'uuid' => $this->uuid,
-            'brand_name' => $this->brand_name,
-            'product_name' => $this->product_name,
-            'code' => $this->code,
-            'sales_price' => (float) $this->sales_price,
+            'basePrice' => (float) ($this->base_price ?? $this->sales_price),
+            'skuCode' => $this->code,
+            'brandName' => $this->brand_name,
+            'productName' => $this->product_name,
+            'categoryId' => $this->primary_category_uuid,
             'notes' => $this->notes,
             'categories' => ProductCategoryResource::collection($this->whenLoaded('categories')),
             'images' => ProductImageResource::collection($this->whenLoaded('images')),
-            'primary_image' => $this->whenLoaded(
+            'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
+            'primaryImage' => $this->whenLoaded(
                 'images',
                 fn () => $this->images->isEmpty() ? null : new ProductImageResource($this->images->first())
             ),
             'plans' => PlanResource::collection($this->whenLoaded('plans')),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'createdAt' => $this->created_at,
+            'updatedAt' => $this->updated_at,
         ];
     }
 }

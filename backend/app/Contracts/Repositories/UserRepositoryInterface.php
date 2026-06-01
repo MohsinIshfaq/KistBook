@@ -13,4 +13,6 @@ interface UserRepositoryInterface
     public function findByLogin(string $login): ?User;
 
     public function findByUuidOrFail(string $uuid): User;
+
+    public function update(User $user, array $data): User;
 }

@@ -38,7 +38,7 @@ class AuthApiTest extends TestCase
 
         $loginResponse
             ->assertOk()
-            ->assertJsonPath('user.company_id', $companyId)
+            ->assertJsonPath('user.companyId', $companyId)
             ->assertJsonPath('company.id', $companyId);
 
         $this->postJson('/api/auth/login', [
@@ -49,9 +49,10 @@ class AuthApiTest extends TestCase
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/auth/profile')
             ->assertOk()
-            ->assertJsonPath('user.phone', '03001234567')
+            ->assertJsonPath('user.phoneNumber', '03001234567')
             ->assertJsonPath('company.id', $companyId)
-            ->assertJsonPath('role', 'owner');
+            ->assertJsonPath('user.role', 'owner')
+            ->assertJsonMissingPath('role');
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/auth/logout')
@@ -71,7 +72,8 @@ class AuthApiTest extends TestCase
 
         $this->postJson('/api/auth/register', $this->ownerPayload())
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['email', 'phone']);
+            ->assertJsonValidationErrors(['email', 'phoneNumber'])
+            ->assertJsonMissingPath('errors.phone');
     }
 
     public function test_owner_can_create_salesman_but_salesman_cannot_create_users(): void
@@ -90,7 +92,7 @@ class AuthApiTest extends TestCase
         $response
             ->assertCreated()
             ->assertJsonPath('user.role', 'salesman')
-            ->assertJsonPath('user.company_id', $owner->company_id);
+            ->assertJsonPath('user.companyId', $owner->company_id);
 
         $salesman = User::query()->where('email', 'salesman@example.com')->firstOrFail();
         Sanctum::actingAs($salesman);

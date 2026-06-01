@@ -7,7 +7,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface ProductServiceInterface
 {
-    public function list(int $perPage = 15): LengthAwarePaginator;
+    public function list(int $perPage = 15, ?string $search = null): LengthAwarePaginator;
 
     public function create(array $data): Product;
 

@@ -16,7 +16,7 @@ class PaymentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return $this->successResponse(PaymentResource::collection($this->payments->list((int) $request->integer('per_page', 15))));
+        return $this->successResponse(PaymentResource::collection($this->payments->list((int) $request->integer('perPage', $request->integer('per_page', 15)))));
     }
 
     public function store(StorePaymentRequest $request): JsonResponse

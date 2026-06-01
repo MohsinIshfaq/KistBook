@@ -38,6 +38,9 @@ use App\Services\PaymentService;
 use App\Services\PlanService;
 use App\Services\ProductCategoryService;
 use App\Services\ProductService;
+use App\Models\Customer;
+use App\Policies\CustomerPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
 
@@ -75,5 +78,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         JsonResource::withoutWrapping();
+        Gate::policy(Customer::class, CustomerPolicy::class);
     }
 }

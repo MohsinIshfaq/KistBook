@@ -20,15 +20,15 @@ class DashboardService implements DashboardServiceInterface
             ->sum(DB::raw('amount - paid_amount'));
 
         return [
-            'total_customers' => Customer::query()->count(),
-            'total_products' => Product::query()->count(),
-            'total_plans' => Plan::query()->count(),
-            'pending_amount' => $pendingInstallmentAmount,
-            'collected_amount' => (float) Payment::query()->whereNull('deleted_at')->sum('amount'),
-            'overdue_amount' => (float) Installment::query()->where('status', InstallmentStatus::Overdue->value)->sum(DB::raw('amount - paid_amount')),
-            'paid_installments' => Installment::query()->where('status', InstallmentStatus::Paid->value)->count(),
-            'pending_installments' => Installment::query()->whereIn('status', [InstallmentStatus::Pending->value, InstallmentStatus::Partial->value])->count(),
-            'overdue_installments' => Installment::query()->where('status', InstallmentStatus::Overdue->value)->count(),
+            'totalCustomers' => Customer::query()->count(),
+            'totalProducts' => Product::query()->count(),
+            'totalPlans' => Plan::query()->count(),
+            'pendingAmount' => $pendingInstallmentAmount,
+            'collectedAmount' => (float) Payment::query()->whereNull('deleted_at')->sum('amount'),
+            'overdueAmount' => (float) Installment::query()->where('status', InstallmentStatus::Overdue->value)->sum(DB::raw('amount - paid_amount')),
+            'paidInstallments' => Installment::query()->where('status', InstallmentStatus::Paid->value)->count(),
+            'pendingInstallments' => Installment::query()->whereIn('status', [InstallmentStatus::Pending->value, InstallmentStatus::Partial->value])->count(),
+            'overdueInstallments' => Installment::query()->where('status', InstallmentStatus::Overdue->value)->count(),
         ];
     }
 }

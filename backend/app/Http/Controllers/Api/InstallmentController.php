@@ -18,7 +18,7 @@ class InstallmentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return $this->successResponse(InstallmentResource::collection($this->installments->list((int) $request->integer('per_page', 15))));
+        return $this->successResponse(InstallmentResource::collection($this->installments->list((int) $request->integer('perPage', $request->integer('per_page', 15)))));
     }
 
     public function store(StoreInstallmentRequest $request): JsonResponse

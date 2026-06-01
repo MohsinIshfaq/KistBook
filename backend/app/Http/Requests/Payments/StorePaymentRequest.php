@@ -2,11 +2,26 @@
 
 namespace App\Http\Requests\Payments;
 
+use App\Http\Requests\Concerns\NormalizesCamelCaseInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StorePaymentRequest extends FormRequest
 {
+    use NormalizesCamelCaseInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->mergeCamelCaseAliases([
+            'operation_uuid' => 'operationId',
+            'customer_uuid' => 'customerId',
+            'plan_uuid' => 'planId',
+            'installment_uuid' => 'installmentId',
+            'paid_on' => 'paidOn',
+            'created_by' => 'createdBy',
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;

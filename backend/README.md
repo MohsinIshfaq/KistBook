@@ -10,6 +10,8 @@ Laravel 13 API backend for installment, customer, product, payment, and sync-rea
 - API Resources
 - Unit / Feature Tests
 
+Normal REST APIs return camelCase keys only. CamelCase request fields are the public standard, while existing snake_case request aliases remain accepted for backward compatibility. The legacy Flutter transports at `/api/sync/upload` and `/api/sync/download` retain their snake_case contract.
+
 ## Stack
 
 - PHP 8.3+
@@ -18,6 +20,10 @@ Laravel 13 API backend for installment, customer, product, payment, and sync-rea
 - Laravel Sanctum
 - UUID-based business records
 - Soft deletes for business entities
+- Company-scoped owner and salesman access
+- Generic product variants with dynamic attributes
+- Offline-first customer synchronization
+- Multi-product common and separate installment plans
 
 ## Project Structure
 
@@ -73,6 +79,8 @@ Create the public storage symlink for product image URLs:
 /opt/homebrew/bin/php artisan storage:link
 ```
 
+Customer and product images are stored on the `public` disk by default. The disk and customer-sync batch limits can be changed with the `KISTBOOK_*` variables in `.env`.
+
 Seed demo data:
 
 ```bash
@@ -115,15 +123,21 @@ Run tests:
 - `GET /api/auth/profile`
 - `POST /api/auth/logout`
 - `GET /api/me` (backward-compatible profile alias)
+- `PATCH /api/auth/profile`
 - `POST /api/company/users` owner-only salesman creation
+
+### Customer Offline Sync
+
+- `GET /api/customers/{uuid}` customer detail
+- `GET /api/customers/sync?lastUpdatedAt=...&limit=10` download up to 10 changed customers
+- `POST /api/customers/sync` create between 1 and 10 customers
+- `PUT /api/customers/sync` update between 1 and 10 customers
+- `DELETE /api/customers/sync` delete between 1 and 10 customers
+
+Customer add, edit, and delete operations are intentionally local-first. Mutation requests send only a `customers` array. HTTP methods define the action: `POST` create, `PUT` update, and `DELETE` delete. Update and delete rows send `serverId`; the client does not send `syncStatus`. Mark local rows as synced when the server returns `isSync: true`. Download responses contain active customers only; deleted server objects are excluded. When download returns `hasMore: true`, send the returned `nextCursor.lastUpdatedAt` and `nextCursor.lastServerId` values with the next request.
 
 ### CRUD
 
-- `GET|POST /api/customers`
-- `GET|PUT|PATCH|DELETE /api/customers/{uuid}`
-- `GET|POST /api/products`
-- `GET|PUT|PATCH|DELETE /api/products/{uuid}`
-- `POST /api/products/{uuid}` multipart update alias for product image uploads
 - `GET|POST /api/categories`
 - `GET|PUT|PATCH|DELETE /api/categories/{uuid}`
 - `GET|POST /api/plans`
@@ -132,6 +146,31 @@ Run tests:
 - `GET|PUT|PATCH|DELETE /api/installments/{uuid}`
 - `GET|POST /api/payments`
 - `GET|PUT|PATCH|DELETE /api/payments/{uuid}`
+
+### Product Offline Sync
+
+- `GET /api/products/{uuid}` product detail
+- `GET /api/products/sync?lastUpdatedAt=...&limit=10` download up to 10 changed products
+- `POST /api/products/sync` create between 1 and 10 products
+- `PUT /api/products/sync` update between 1 and 10 products
+- `DELETE /api/products/sync` delete between 1 and 10 products
+
+Product mutation requests send only a `products` array. HTTP methods define the action. Update and delete rows send `serverId`. Product images use optional base64 `productImages` entries. Sending `productImages` in a `PUT` row replaces the current images; omitting it preserves existing images. Sending `variants` in a `PUT` row replaces the active generic variant set.
+
+### Canonical Installment Plans
+
+- `GET|POST /api/installment-plans`
+- `GET|PUT|PATCH|DELETE /api/installment-plans/{uuid}`
+
+Canonical installment plans support multiple products, a common schedule, or separate per-product schedules. Existing `/api/plans`, `/api/installments`, and generic `/api/sync/*` routes remain available for Flutter compatibility.
+
+### API Documentation And Postman
+
+- Full API guide: `API_DOCUMENTATION.md`
+- Postman collection: `KistBook_Laravel_API.postman_collection.json`
+- Postman environment: `KistBook_Environment.postman_environment.json`
+
+Import both Postman files, select `KistBook Environment`, run signup or use seeded credentials, then run login. The login test script automatically stores the Sanctum bearer token.
 
 ### Access and Dashboard
 
@@ -148,14 +187,14 @@ curl -X POST http://127.0.0.1:8000/api/auth/register \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "New Owner",
+    "firstName": "New",
+    "lastName": "Owner",
     "email": "owner@example.com",
-    "phone": "03001234567",
+    "phoneNumber": "03001234567",
     "password": "password",
-    "password_confirmation": "password",
-    "company_name": "KistBook Demo Company",
-    "company_phone": "03001234567",
-    "company_address": "Bahawalpur"
+    "companyName": "KistBook Demo Company",
+    "companyPhone": "03001234567",
+    "companyAddress": "Bahawalpur"
   }'
 ```
 
@@ -179,28 +218,36 @@ curl -X POST http://127.0.0.1:8000/api/company/users \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Sales Man",
+    "firstName": "Sales",
+    "lastName": "Man",
     "email": "salesman@example.com",
-    "phone": "03123456789",
+    "phoneNumber": "03123456789",
     "password": "password",
-    "password_confirmation": "password"
+    "passwordConfirmation": "password"
   }'
 ```
 
-Create customer:
+Upload locally created customer:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/customers \
+curl -X POST http://127.0.0.1:8000/api/customers/sync \
   -H "Accept: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "card_no": "CARD-9001",
-    "name": "Ali Khan",
-    "phone": "03005551234",
-    "cnic": "12345-1234567-1",
-    "address": "Lahore",
-    "reference": "Friend"
+    "customers": [
+      {
+        "cardNumber": "CARD-9001",
+        "customerName": "Ali Khan",
+        "phoneNumber": "03005551234",
+        "cnic": "12345-1234567-1",
+        "address": "Lahore",
+        "reference": "Friend",
+        "customerImageBase64": "BASE64_IMAGE_DATA",
+        "customerImageOriginalName": "customer.jpg",
+        "customerImageMimeType": "image/jpeg"
+      }
+    ]
   }'
 ```
 
@@ -212,56 +259,73 @@ curl -X POST http://127.0.0.1:8000/api/plans \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_uuid": "CUSTOMER_UUID",
-    "product_uuid": "PRODUCT_UUID",
+    "customerId": "CUSTOMER_UUID",
+    "productId": "PRODUCT_UUID",
     "quantity": 1,
-    "unit_price": 25000,
-    "total_amount": 25000,
-    "deposit_amount": 5000,
-    "installment_amount": 5000,
-    "installment_count": 4,
-    "frequency_days": 30,
-    "start_date": "2026-05-12",
-    "notes": "New installment plan",
+    "unitPrice": 25000,
+    "totalAmount": 25000,
+    "depositAmount": 5000,
+    "installmentAmount": 5000,
+    "installmentCount": 4,
+    "frequencyInDays": 30,
+    "firstDueDate": "2026-05-12",
+    "note": "New installment plan",
     "status": "active"
   }'
 ```
 
-Create product with images:
+Upload locally created product:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/products \
+curl -X POST http://127.0.0.1:8000/api/products/sync \
   -H "Accept: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "brand_name=Oppo" \
-  -F "product_name=Reno 13" \
-  -F "code=REN-13" \
-  -F "sales_price=118000" \
-  -F "category_uuids[]=CATEGORY_UUID" \
-  -F "images[]=@/absolute/path/front.jpg" \
-  -F "images[]=@/absolute/path/back.jpg"
+  -H "Content-Type: application/json" \
+  -d '{
+    "products": [
+      {
+        "categoryId": "CATEGORY_UUID",
+        "brandName": "Oppo",
+        "productName": "Reno 13",
+        "skuCode": "REN-13",
+        "basePrice": 118000,
+        "productImages": [
+          {
+            "imageBase64": "BASE64_IMAGE_DATA",
+            "originalName": "front.jpg",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      }
+    ]
+  }'
 ```
 
-Update product images:
+Update product:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/products/PRODUCT_UUID \
+curl -X PUT http://127.0.0.1:8000/api/products/sync \
   -H "Accept: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "product_name=Reno 13 Pro" \
-  -F "image_uuids[]=EXISTING_IMAGE_UUID_TO_KEEP_FIRST" \
-  -F "remove_image_uuids[]=IMAGE_UUID_TO_REMOVE" \
-  -F "images[]=@/absolute/path/new-angle.jpg"
+  -H "Content-Type: application/json" \
+  -d '{
+    "products": [
+      {
+        "serverId": "PRODUCT_UUID",
+        "productName": "Reno 13 Pro",
+        "basePrice": 120000
+      }
+    ]
+  }'
 ```
 
 Product image rules:
 
-- `images[]` is optional, max 12 files per request.
-- Supported image types: `jpg`, `jpeg`, `png`, `webp`, `heic`.
-- Max image size: 5 MB each.
-- The first image by `sort_order` is returned as `primary_image`.
-- Send `image_uuids[]` on update to keep and reorder existing images.
-- Send `remove_image_uuids[]` on update to remove specific existing images.
+- `productImages` is optional, max 12 base64 images per product.
+- Supported image MIME types: `image/jpeg`, `image/png`, `image/webp`, `image/heic`.
+- Max decoded image size: 5 MB each.
+- Sending `productImages` in `PUT /api/products/sync` replaces the active image set.
+- Omitting `productImages` in an update preserves current images.
 
 Create payment:
 
@@ -271,12 +335,12 @@ curl -X POST http://127.0.0.1:8000/api/payments \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "operation_uuid": "7d6bd214-c813-42e1-9804-6ed9b7f4f603",
-    "customer_uuid": "CUSTOMER_UUID",
-    "plan_uuid": "PLAN_UUID",
-    "installment_uuid": "INSTALLMENT_UUID",
+    "operationId": "7d6bd214-c813-42e1-9804-6ed9b7f4f603",
+    "customerId": "CUSTOMER_UUID",
+    "planId": "PLAN_UUID",
+    "installmentId": "INSTALLMENT_UUID",
     "amount": 2500,
-    "paid_on": "2026-05-12",
+    "paidOn": "2026-05-12",
     "note": "Partial payment",
     "source": "mobile"
   }'
@@ -287,21 +351,23 @@ curl -X POST http://127.0.0.1:8000/api/payments \
 ```json
 {
   "success": true,
-  "message": "Customer created successfully.",
-  "data": {
-    "uuid": "019f3b6e-5637-72fe-8dc5-1c5fbf4ab999",
-    "card_no": "CARD-9001",
-    "name": "Ali Khan",
-    "phone": "03005551234",
-    "cnic": "12345-1234567-1",
-    "address": "Lahore",
-    "reference": "Friend",
-    "plans": [],
-    "payments": [],
-    "users": [],
-    "created_at": "2026-05-12T10:00:00.000000Z",
-    "updated_at": "2026-05-12T10:00:00.000000Z"
-  }
+  "message": "Customer sync upload completed",
+  "mappings": [
+    {
+      "index": 0,
+      "serverId": "019f3b6e-5637-72fe-8dc5-1c5fbf4ab999"
+    }
+  ],
+  "synced": [
+    {
+      "serverId": "019f3b6e-5637-72fe-8dc5-1c5fbf4ab999",
+      "customerName": "Ali Khan",
+      "isSync": true,
+      "syncStatus": "synced"
+    }
+  ],
+  "failed": [],
+  "conflicts": []
 }
 ```
 
@@ -310,8 +376,14 @@ curl -X POST http://127.0.0.1:8000/api/payments \
 - Sanctum token authentication
 - UUID-based records for syncable entities
 - Soft deletes on business records
+- Owner-scoped product and variant SKU uniqueness
+- Assigned-only salesman customer access with automatic assignment on sync create
+- Device-scoped customer local ID mappings and timestamp conflict responses
+- Dynamic product variant attributes
+- Common and per-item installment schedule generation
+- Paid schedule preservation when canonical plans are edited
 - Automatic plan installment generation
-- Payment idempotency via `operation_uuid`
+- Payment idempotency via `operationId`
 - Installment paid amount and status recalculation
 - Dashboard aggregate metrics
 - Sync-ready tables:

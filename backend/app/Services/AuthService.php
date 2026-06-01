@@ -19,7 +19,7 @@ class AuthService implements AuthServiceInterface
     {
         return DB::transaction(function () use ($data): array {
             $company = Company::query()->create([
-                'name' => $data['company_name'],
+                'name' => $data['company_name'] ?? $data['name'].' Shop',
                 'phone' => $data['company_phone'] ?? null,
                 'email' => $data['email'],
                 'address' => $data['company_address'] ?? null,
@@ -72,6 +72,15 @@ class AuthService implements AuthServiceInterface
     public function logout(User $user): void
     {
         $user->currentAccessToken()?->delete();
+    }
+
+    public function updateProfile(User $user, array $data): User
+    {
+        $firstName = $data['first_name'] ?? $user->first_name;
+        $lastName = array_key_exists('last_name', $data) ? $data['last_name'] : $user->last_name;
+        $data['name'] = trim(implode(' ', array_filter([$firstName, $lastName])));
+
+        return $this->users->update($user, $data)->load('company');
     }
 
     /**

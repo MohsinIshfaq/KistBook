@@ -11,4 +11,6 @@ interface AuthServiceInterface
     public function login(array $credentials): array;
 
     public function logout(User $user): void;
+
+    public function updateProfile(User $user, array $data): User;
 }

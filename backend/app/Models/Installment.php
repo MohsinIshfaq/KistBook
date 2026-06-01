@@ -24,7 +24,10 @@ class Installment extends Model
         'uuid',
         'company_id',
         'plan_uuid',
+        'plan_item_uuid',
+        'schedule_group',
         'sequence_number',
+        'item_sequence_number',
         'scheduled_due_date',
         'current_due_date',
         'amount',
@@ -37,6 +40,7 @@ class Installment extends Model
     {
         return [
             'sequence_number' => 'integer',
+            'item_sequence_number' => 'integer',
             'scheduled_due_date' => 'date',
             'current_due_date' => 'date',
             'amount' => 'decimal:2',
@@ -54,5 +58,10 @@ class Installment extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'installment_uuid', 'uuid');
+    }
+
+    public function planItem(): BelongsTo
+    {
+        return $this->belongsTo(InstallmentPlanItem::class, 'plan_item_uuid', 'uuid');
     }
 }

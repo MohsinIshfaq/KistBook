@@ -6,6 +6,7 @@ use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Services\ProductServiceInterface;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Illuminate\Validation\ValidationException;
 
 class ProductService implements ProductServiceInterface
 {
@@ -20,9 +22,9 @@ class ProductService implements ProductServiceInterface
 
     public function __construct(private readonly ProductRepositoryInterface $products) {}
 
-    public function list(int $perPage = 15): LengthAwarePaginator
+    public function list(int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
-        return $this->products->paginate($perPage, ['categories', 'images']);
+        return $this->products->paginateSearch($perPage, $search, ['categories', 'images', 'variants.attributes']);
     }
 
     public function create(array $data): Product
@@ -30,20 +32,23 @@ class ProductService implements ProductServiceInterface
         return DB::transaction(function () use ($data): Product {
             $categoryUuids = $data['category_uuids'] ?? [];
             $images = $data['images'] ?? [];
-            unset($data['category_uuids'], $data['images']);
+            $variants = $data['variants'] ?? [];
+            unset($data['category_uuids'], $data['images'], $data['variants']);
+            $categoryUuids = $this->categoryUuids($categoryUuids, $data['primary_category_uuid'] ?? null);
 
             /** @var Product $product */
             $product = $this->products->create($data);
             $this->products->syncCategories($product, $categoryUuids);
             $this->storeImages($product, $images);
+            $this->syncVariants($product, $variants);
 
-            return $product->load(['categories', 'images']);
+            return $product->load(['categories', 'images', 'variants.attributes']);
         });
     }
 
     public function show(string $uuid): Product
     {
-        return $this->products->findByUuidOrFail($uuid, ['categories', 'images', 'plans']);
+        return $this->products->findByUuidOrFail($uuid, ['categories', 'images', 'variants.attributes', 'plans']);
     }
 
     public function update(string $uuid, array $data): Product
@@ -54,25 +59,32 @@ class ProductService implements ProductServiceInterface
             $images = $data['images'] ?? [];
             $imageUuids = $data['image_uuids'] ?? null;
             $removeImageUuids = $data['remove_image_uuids'] ?? [];
+            $variants = $data['variants'] ?? null;
             unset(
                 $data['category_uuids'],
                 $data['images'],
                 $data['image_uuids'],
                 $data['remove_image_uuids'],
+                $data['variants'],
             );
 
             /** @var Product $updated */
             $updated = $this->products->update($product, $data);
 
-            if (is_array($categoryUuids)) {
+            if (is_array($categoryUuids) || array_key_exists('primary_category_uuid', $data)) {
+                $categoryUuids ??= $updated->categories()->pluck('uuid')->all();
+                $categoryUuids = $this->categoryUuids($categoryUuids, $data['primary_category_uuid'] ?? $updated->primary_category_uuid);
                 $this->products->syncCategories($updated, $categoryUuids);
             }
 
             $this->syncExistingImages($updated, $imageUuids, $removeImageUuids);
             $this->storeImages($updated, $images);
             $this->compactImageOrder($updated);
+            if (is_array($variants)) {
+                $this->syncVariants($updated, $variants);
+            }
 
-            return $updated->load(['categories', 'images']);
+            return $updated->load(['categories', 'images', 'variants.attributes']);
         });
     }
 
@@ -81,8 +93,73 @@ class ProductService implements ProductServiceInterface
         DB::transaction(function () use ($uuid): void {
             $product = $this->products->findByUuidOrFail($uuid, ['images']);
             $this->deleteImages($product->images);
+            foreach ($product->variants()->get() as $variant) {
+                $this->deleteVariant($variant);
+            }
             $this->products->softDelete($product);
         });
+    }
+
+    private function syncVariants(Product $product, array $variants): void
+    {
+        $kept = [];
+        foreach ($variants as $data) {
+            $variant = isset($data['uuid'])
+                ? $product->variants()->withTrashed()->where('uuid', $data['uuid'])->first()
+                : null;
+            if (isset($data['uuid']) && $variant === null) {
+                throw ValidationException::withMessages(['variants' => ['The selected variant does not belong to this product.']]);
+            }
+            $duplicate = ProductVariant::query()
+                ->withTrashed()
+                ->where('sku_code', $data['sku_code'])
+                ->when($variant, fn ($query) => $query->where('uuid', '!=', $variant->uuid))
+                ->exists();
+            if ($duplicate) {
+                throw ValidationException::withMessages(['variants' => ['Variant SKU ['.$data['sku_code'].'] is already in use.']]);
+            }
+
+            $variant ??= new ProductVariant(['product_uuid' => $product->uuid]);
+            if ($variant->trashed()) {
+                $variant->restore();
+            }
+            $variant->fill([
+                'product_uuid' => $product->uuid,
+                'sku_code' => $data['sku_code'],
+                'sale_price' => $data['sale_price'],
+                'is_deleted' => false,
+            ])->save();
+            $kept[] = $variant->uuid;
+
+            foreach ($variant->attributes()->get() as $attribute) {
+                $attribute->forceFill(['is_deleted' => true])->save();
+                $attribute->delete();
+            }
+            foreach ($data['attributes'] ?? [] as $attribute) {
+                $variant->attributes()->create([
+                    'name' => $attribute['name'],
+                    'value' => $attribute['value'],
+                    'is_deleted' => false,
+                ]);
+            }
+        }
+
+        $product->variants()->whereNotIn('uuid', $kept)->get()->each(fn (ProductVariant $variant) => $this->deleteVariant($variant));
+    }
+
+    private function deleteVariant(ProductVariant $variant): void
+    {
+        foreach ($variant->attributes()->get() as $attribute) {
+            $attribute->forceFill(['is_deleted' => true])->save();
+            $attribute->delete();
+        }
+        $variant->forceFill(['is_deleted' => true])->save();
+        $variant->delete();
+    }
+
+    private function categoryUuids(array $categoryUuids, ?string $primaryCategoryUuid): array
+    {
+        return array_values(array_unique(array_filter([...$categoryUuids, $primaryCategoryUuid])));
     }
 
     /**

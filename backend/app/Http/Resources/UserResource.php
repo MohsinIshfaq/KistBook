@@ -12,18 +12,17 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
-            'company_id' => $this->company_id,
+            'companyId' => $this->company_id,
             'name' => $this->name,
-            'phone' => $this->phone,
+            'phoneNumber' => $this->phone,
             'email' => $this->email,
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
-            'access_level' => $this->access_level?->value ?? $this->access_level,
+            'firstName' => $this->first_name,
+            'lastName' => $this->last_name,
             'role' => $this->role?->value ?? $this->role,
             'status' => $this->status,
-            'is_active' => $this->is_active,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'isActive' => $this->is_active,
+            'createdAt' => $this->created_at,
+            'updatedAt' => $this->updated_at,
         ];
     }
 }

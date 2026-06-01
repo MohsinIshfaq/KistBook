@@ -32,4 +32,11 @@ class UserRepository implements UserRepositoryInterface
     {
         return User::query()->where('uuid', $uuid)->firstOrFail();
     }
+
+    public function update(User $user, array $data): User
+    {
+        $user->fill($data)->save();
+
+        return $user->refresh();
+    }
 }

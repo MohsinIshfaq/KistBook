@@ -26,10 +26,12 @@ class Plan extends Model
         'company_id',
         'customer_uuid',
         'product_uuid',
+        'mode',
         'quantity',
         'unit_price',
         'total_amount',
         'deposit_amount',
+        'remaining_amount',
         'installment_amount',
         'installment_count',
         'frequency_days',
@@ -46,6 +48,7 @@ class Plan extends Model
             'unit_price' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
+            'remaining_amount' => 'decimal:2',
             'installment_amount' => 'decimal:2',
             'installment_count' => 'integer',
             'frequency_days' => 'integer',
@@ -80,5 +83,10 @@ class Plan extends Model
         return $this->belongsToMany(User::class, 'user_plan_access', 'plan_uuid', 'user_uuid', 'uuid', 'uuid')
             ->withPivot(['uuid', 'is_deleted'])
             ->withTimestamps();
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(InstallmentPlanItem::class, 'plan_uuid', 'uuid');
     }
 }

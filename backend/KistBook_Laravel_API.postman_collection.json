@@ -1,0 +1,264 @@
+{
+  "info": {
+    "_postman_id": "42dc3326-da97-4988-b5e2-2be88ac69e4b",
+    "name": "KistBook Laravel API",
+    "description": "Laravel Sanctum API collection for KistBook. Select KistBook Environment before running requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "device_id", "value": "postman-device-001" },
+    { "key": "local_customer_id", "value": "postman-local-001" },
+    { "key": "customer_image_base64", "value": "" },
+    { "key": "product_image_base64", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Signup",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Ali\",\n  \"lastName\": \"Raza\",\n  \"email\": \"ali@example.com\",\n  \"phoneNumber\": \"03001234567\",\n  \"password\": \"password\",\n  \"companyName\": \"Ali Electronics\",\n  \"companyPhone\": \"03001234567\",\n  \"companyAddress\": \"Lahore\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "auth": { "type": "noauth" },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.token) { pm.environment.set('token', json.token); }"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"03001234567\",\n  \"password\": \"password\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/profile", "host": ["{{base_url}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Ali Updated\",\n  \"lastName\": \"Raza\",\n  \"phoneNumber\": \"03001234567\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/profile", "host": ["{{base_url}}"], "path": ["auth", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Customer Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/customers/{{customer_id}}", "host": ["{{base_url}}"], "path": ["customers", "{{customer_id}}"] }
+          }
+        },
+        {
+          "name": "Customer Sync Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/customers/sync?lastUpdatedAt=2026-06-01T10:00:00.000Z&limit=10", "host": ["{{base_url}}"], "path": ["customers", "sync"], "query": [{ "key": "lastUpdatedAt", "value": "2026-06-01T10:00:00.000Z" }, { "key": "lastServerId", "value": "", "disabled": true }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Customer Sync Upload - Create",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json.mappings && json.mappings[0] && json.mappings[0].serverId) { pm.environment.set('customer_id', json.mappings[0].serverId); }"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customers\": [\n    {\n      \"cardNumber\": \"OFFLINE-9001\",\n      \"customerName\": \"Offline Customer\",\n      \"phoneNumber\": \"03006661234\",\n      \"cnic\": \"42101-7654321-1\",\n      \"address\": \"Lahore\",\n      \"reference\": \"Mobile\",\n      \"customerImageBase64\": \"{{customer_image_base64}}\",\n      \"customerImageOriginalName\": \"customer.jpg\",\n      \"customerImageMimeType\": \"image/jpeg\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/customers/sync", "host": ["{{base_url}}"], "path": ["customers", "sync"] }
+          }
+        },
+        {
+          "name": "Customer Sync Upload - Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customers\": [\n    {\n      \"serverId\": \"{{customer_id}}\",\n      \"cardNumber\": \"OFFLINE-9001\",\n      \"customerName\": \"Offline Customer Updated\",\n      \"phoneNumber\": \"03006661234\",\n      \"cnic\": \"42101-7654321-1\",\n      \"address\": \"Karachi\",\n      \"reference\": \"Updated locally\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/customers/sync", "host": ["{{base_url}}"], "path": ["customers", "sync"] }
+          }
+        },
+        {
+          "name": "Customer Sync Upload - Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customers\": [\n    {\n      \"serverId\": \"{{customer_id}}\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/customers/sync", "host": ["{{base_url}}"], "path": ["customers", "sync"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "Add Category",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json.data && json.data.uuid) { pm.environment.set('category_id', json.data.uuid); }"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Mobile Phones\"\n}" },
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Product Sync Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/products/sync?lastUpdatedAt=2026-06-01T10:00:00.000Z&limit=10", "host": ["{{base_url}}"], "path": ["products", "sync"], "query": [{ "key": "lastUpdatedAt", "value": "2026-06-01T10:00:00.000Z" }, { "key": "lastServerId", "value": "", "disabled": true }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Product Sync Upload - Create",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json.mappings && json.mappings[0] && json.mappings[0].serverId) { pm.environment.set('product_id', json.mappings[0].serverId); }", "if (json.synced && json.synced[0] && json.synced[0].variants && json.synced[0].variants[0]) { pm.environment.set('variant_id', json.synced[0].variants[0].serverId); }"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"categoryId\": \"{{category_id}}\",\n      \"brandName\": \"Oppo\",\n      \"productName\": \"Reno 13\",\n      \"skuCode\": \"OPPO-R13\",\n      \"basePrice\": 145000,\n      \"notes\": \"Offline product\",\n      \"productImages\": [\n        {\n          \"imageBase64\": \"{{product_image_base64}}\",\n          \"originalName\": \"reno-13.jpg\",\n          \"mimeType\": \"image/jpeg\"\n        }\n      ],\n      \"variants\": [\n        {\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 145000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/products/sync", "host": ["{{base_url}}"], "path": ["products", "sync"] }
+          }
+        },
+        {
+          "name": "Product Sync Upload - Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"serverId\": \"{{product_id}}\",\n      \"productName\": \"Reno 13 Updated\",\n      \"basePrice\": 150000,\n      \"variants\": [\n        {\n          \"serverId\": \"{{variant_id}}\",\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 150000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/products/sync", "host": ["{{base_url}}"], "path": ["products", "sync"] }
+          }
+        },
+        {
+          "name": "Product Sync Upload - Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"serverId\": \"{{product_id}}\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/products/sync", "host": ["{{base_url}}"], "path": ["products", "sync"] }
+          }
+        },
+        {
+          "name": "Product Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["products", "{{product_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Installment Plans",
+      "item": [
+        {
+          "name": "Create Common Installment Plan",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json.data && json.data.uuid) { pm.environment.set('installment_plan_id', json.data.uuid); }"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"mode\": \"common\",\n  \"selectedProducts\": [\n    { \"productId\": \"{{product_id}}\", \"variantId\": \"{{variant_id}}\", \"quantity\": 1 }\n  ],\n  \"commonDeposit\": 10000,\n  \"commonInstallmentAmount\": 5000,\n  \"commonFrequencyInDays\": 30,\n  \"commonFirstDueDate\": \"2026-06-15\",\n  \"note\": \"Common schedule\"\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans", "host": ["{{base_url}}"], "path": ["installment-plans"] }
+          }
+        },
+        {
+          "name": "Create Separate Installment Plan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"mode\": \"separate\",\n  \"selectedProducts\": [\n    {\n      \"productId\": \"{{product_id}}\",\n      \"variantId\": \"{{variant_id}}\",\n      \"quantity\": 1,\n      \"agreedPrice\": 145000,\n      \"deposit\": 10000,\n      \"installmentAmount\": 5000,\n      \"frequencyInDays\": 30,\n      \"firstDueDate\": \"2026-06-15\"\n    }\n  ],\n  \"note\": \"Per-product schedule\"\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans", "host": ["{{base_url}}"], "path": ["installment-plans"] }
+          }
+        },
+        {
+          "name": "Edit Installment Plan",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"mode\": \"common\",\n  \"selectedProducts\": [\n    { \"productId\": \"{{product_id}}\", \"variantId\": \"{{variant_id}}\", \"quantity\": 1 }\n  ],\n  \"commonDeposit\": 12000,\n  \"commonInstallmentAmount\": 5500,\n  \"commonFrequencyInDays\": 30,\n  \"commonFirstDueDate\": \"2026-06-15\",\n  \"note\": \"Updated common schedule\"\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans/{{installment_plan_id}}", "host": ["{{base_url}}"], "path": ["installment-plans", "{{installment_plan_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Installment Plan",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/installment-plans/{{installment_plan_id}}", "host": ["{{base_url}}"], "path": ["installment-plans", "{{installment_plan_id}}"] }
+          }
+        },
+        {
+          "name": "Installment Plan List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/installment-plans?perPage=15", "host": ["{{base_url}}"], "path": ["installment-plans"], "query": [{ "key": "perPage", "value": "15" }] }
+          }
+        },
+        {
+          "name": "Installment Plan Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/installment-plans/{{installment_plan_id}}", "host": ["{{base_url}}"], "path": ["installment-plans", "{{installment_plan_id}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}

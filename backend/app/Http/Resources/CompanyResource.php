@@ -13,13 +13,13 @@ class CompanyResource extends JsonResource
             'id' => $this->id,
             'uuid' => $this->uuid,
             'name' => $this->name,
-            'phone' => $this->phone,
+            'phoneNumber' => $this->phone,
             'email' => $this->email,
             'address' => $this->address,
-            'owner_id' => $this->owner_id,
+            'ownerId' => $this->owner_id,
             'status' => $this->status,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'createdAt' => $this->created_at,
+            'updatedAt' => $this->updated_at,
         ];
     }
 }

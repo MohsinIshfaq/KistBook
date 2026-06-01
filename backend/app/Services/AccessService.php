@@ -21,9 +21,17 @@ class AccessService implements AccessServiceInterface
     {
         $this->salesmanForOwner($userUuid);
         Customer::query()->where('uuid', $customerUuid)->firstOrFail();
+        $assignment = $this->customerAccess->assign($userUuid, $customerUuid);
 
         return [
-            'assignment' => $this->customerAccess->assign($userUuid, $customerUuid),
+            'assignment' => [
+                'uuid' => $assignment->uuid,
+                'userId' => $assignment->user_uuid,
+                'customerId' => $assignment->customer_uuid,
+                'isDeleted' => (bool) $assignment->is_deleted,
+                'createdAt' => $assignment->created_at,
+                'updatedAt' => $assignment->updated_at,
+            ],
         ];
     }
 
@@ -31,9 +39,17 @@ class AccessService implements AccessServiceInterface
     {
         $this->salesmanForOwner($userUuid);
         Plan::query()->where('uuid', $planUuid)->firstOrFail();
+        $assignment = $this->planAccess->assign($userUuid, $planUuid);
 
         return [
-            'assignment' => $this->planAccess->assign($userUuid, $planUuid),
+            'assignment' => [
+                'uuid' => $assignment->uuid,
+                'userId' => $assignment->user_uuid,
+                'planId' => $assignment->plan_uuid,
+                'isDeleted' => (bool) $assignment->is_deleted,
+                'createdAt' => $assignment->created_at,
+                'updatedAt' => $assignment->updated_at,
+            ],
         ];
     }
 

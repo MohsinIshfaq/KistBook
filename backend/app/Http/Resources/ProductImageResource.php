@@ -14,13 +14,13 @@ class ProductImageResource extends JsonResource
             'uuid' => $this->uuid,
             'url' => Storage::disk($this->disk)->url($this->path),
             'path' => $this->path,
-            'original_name' => $this->original_name,
-            'mime_type' => $this->mime_type,
+            'originalName' => $this->original_name,
+            'mimeType' => $this->mime_type,
             'size' => $this->size,
-            'sort_order' => $this->sort_order,
-            'is_primary' => $this->sort_order === 0,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'sortOrder' => $this->sort_order,
+            'isPrimary' => $this->sort_order === 0,
+            'createdAt' => $this->created_at,
+            'updatedAt' => $this->updated_at,
         ];
     }
 }

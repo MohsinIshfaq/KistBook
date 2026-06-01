@@ -28,6 +28,11 @@ class Customer extends Model
         'cnic',
         'address',
         'reference',
+        'image_disk',
+        'image_path',
+        'image_original_name',
+        'image_mime_type',
+        'image_size',
         'is_deleted',
     ];
 
@@ -35,6 +40,7 @@ class Customer extends Model
     {
         return [
             'is_deleted' => 'boolean',
+            'image_size' => 'integer',
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Contracts\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\CompanyResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
@@ -57,7 +58,13 @@ class AuthController extends Controller
             'message' => 'Authenticated user fetched successfully.',
             'user' => new UserResource($user),
             'company' => $user->company ? new CompanyResource($user->company) : null,
-            'role' => $user->role?->value ?? $user->role,
         ]);
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $this->authService->updateProfile($request->user(), $request->validated());
+
+        return $this->successResponse(new UserResource($user), 'Profile updated successfully.');
     }
 }
