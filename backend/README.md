@@ -155,7 +155,7 @@ Customer add, edit, and delete operations are intentionally local-first. Mutatio
 - `PUT /api/products/sync` update between 1 and 10 products
 - `DELETE /api/products/sync` delete between 1 and 10 products
 
-Product mutation requests send only a `products` array. HTTP methods define the action. Update and delete rows send `serverId`. Product images use optional base64 `productImages` entries. Sending `productImages` in a `PUT` row replaces the current images; omitting it preserves existing images. Sending `variants` in a `PUT` row replaces the active generic variant set.
+Product mutation requests send only a `products` array. HTTP methods define the action. Create requires only `productName` and `salesPrice`; `categoryId`, `productImages`, `brandName`, and `skuCode` are optional. Update and delete rows send `serverId`. Product images use optional base64 `productImages` entries. Sending `productImages` in a `PUT` row replaces the current images; omitting it preserves existing images. Sending `variants` in a `PUT` row replaces the active generic variant set.
 
 ### Canonical Installment Plans
 
@@ -284,11 +284,8 @@ curl -X POST http://127.0.0.1:8000/api/products/sync \
   -d '{
     "products": [
       {
-        "categoryId": "CATEGORY_UUID",
-        "brandName": "Oppo",
         "productName": "Reno 13",
-        "skuCode": "REN-13",
-        "basePrice": 118000,
+        "salesPrice": 118000,
         "productImages": [
           {
             "imageBase64": "BASE64_IMAGE_DATA",
@@ -313,7 +310,7 @@ curl -X PUT http://127.0.0.1:8000/api/products/sync \
       {
         "serverId": "PRODUCT_UUID",
         "productName": "Reno 13 Pro",
-        "basePrice": 120000
+        "salesPrice": 120000
       }
     ]
   }'

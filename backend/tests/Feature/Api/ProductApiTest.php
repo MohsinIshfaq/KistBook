@@ -18,12 +18,14 @@ class ProductApiTest extends TestCase
         $product = Product::factory()->create([
             'company_id' => $owner->company_id,
             'product_name' => 'Reno 13',
+            'sales_price' => 145000,
         ]);
         Sanctum::actingAs($owner);
 
         $this->getJson('/api/products/'.$product->uuid)
             ->assertOk()
-            ->assertJsonPath('data.productName', 'Reno 13');
+            ->assertJsonPath('data.productName', 'Reno 13')
+            ->assertJsonPath('data.salesPrice', 145000);
     }
 
     public function test_direct_product_mutation_and_list_routes_are_not_exposed(): void

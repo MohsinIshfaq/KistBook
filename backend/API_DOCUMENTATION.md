@@ -106,16 +106,14 @@ Each mutation accepts between `1` and `10` customer records. For create uploads,
 | `PUT` | `/products/sync` | Update server products |
 | `DELETE` | `/products/sync` | Soft-delete server products |
 
-Product add, edit, and delete operations follow the same local-first contract as customers. Send only a `products` array. The HTTP method defines the operation. Update and delete rows must include `serverId`. Each mutation accepts between `1` and `10` products.
+Product add, edit, and delete operations follow the same local-first contract as customers. Send only a `products` array. The HTTP method defines the operation. Update and delete rows must include `serverId`. Each mutation accepts between `1` and `10` products. Create requires only `productName` and `salesPrice`. `categoryId`, `productImages`, `brandName`, and `skuCode` are optional; when `skuCode` is omitted, the server generates a unique SKU.
 
 Example generic variants:
 
 ```json
 {
-  "brandName": "Gree",
   "productName": "Inverter AC",
-  "skuCode": "GREE-AC",
-  "basePrice": 185000,
+  "salesPrice": 185000,
   "variants": [
     {
       "skuCode": "GREE-AC-15T-PULAR",
@@ -130,7 +128,7 @@ Example generic variants:
 }
 ```
 
-Product and variant SKUs are unique within each company. Sending `variants` during update replaces the active variant set; omitted variants are soft deleted.
+Product SKU is optional; when supplied it must be unique within the company. Variant SKUs are unique within each company. Sending `variants` during update replaces the active variant set; omitted variants are soft deleted.
 
 Optional product images use:
 

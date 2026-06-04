@@ -34,6 +34,9 @@ class ProductService implements ProductServiceInterface
             $images = $data['images'] ?? [];
             $variants = $data['variants'] ?? [];
             unset($data['category_uuids'], $data['images'], $data['variants']);
+            $data['brand_name'] = $data['brand_name'] ?? '';
+            $data['code'] = $data['code'] ?? $this->generateSku((int) ($data['company_id'] ?? auth()->user()?->company_id));
+            $data['base_price'] = $data['base_price'] ?? $data['sales_price'];
             $categoryUuids = $this->categoryUuids($categoryUuids, $data['primary_category_uuid'] ?? null);
 
             /** @var Product $product */
@@ -277,5 +280,17 @@ class ProductService implements ProductServiceInterface
 
                 $image->forceFill(['sort_order' => $sortOrder])->save();
             });
+    }
+
+    private function generateSku(int $companyId): string
+    {
+        do {
+            $code = 'PRD-'.Str::upper(Str::random(10));
+        } while (Product::query()
+            ->where('company_id', $companyId)
+            ->where('code', $code)
+            ->exists());
+
+        return $code;
     }
 }

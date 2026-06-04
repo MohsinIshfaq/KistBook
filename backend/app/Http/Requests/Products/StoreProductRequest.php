@@ -9,13 +9,13 @@ class StoreProductRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        $basePrice = $this->input('base_price', $this->input('basePrice', $this->input('sales_price')));
+        $salesPrice = $this->input('sales_price', $this->input('salesPrice', $this->input('basePrice', $this->input('base_price'))));
         $this->merge([
             'brand_name' => $this->input('brand_name', $this->input('brandName')),
             'product_name' => $this->input('product_name', $this->input('productName')),
             'code' => $this->input('code', $this->input('skuCode')),
-            'base_price' => $basePrice,
-            'sales_price' => $this->input('sales_price', $basePrice),
+            'base_price' => $this->input('base_price', $this->input('basePrice', $salesPrice)),
+            'sales_price' => $salesPrice,
             'primary_category_uuid' => $this->input('primary_category_uuid', $this->input('categoryId')),
             'category_uuids' => $this->input('category_uuids', $this->input('categoryIds', $this->input('categoryUuids'))),
             'variants' => $this->normalizeVariants($this->input('variants', [])),
@@ -34,11 +34,11 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'brand_name' => ['required', 'string', 'max:255'],
+            'brand_name' => ['nullable', 'string', 'max:255'],
             'product_name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:100', Rule::unique('products', 'code')->where('company_id', $this->user()?->company_id)],
+            'code' => ['nullable', 'string', 'max:100', Rule::unique('products', 'code')->where('company_id', $this->user()?->company_id)],
             'sales_price' => ['required', 'numeric', 'min:0'],
-            'base_price' => ['required', 'numeric', 'min:0'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'primary_category_uuid' => ['nullable', 'uuid', Rule::exists('product_categories', 'uuid')->where('company_id', $this->user()?->company_id)],
             'category_uuids' => ['nullable', 'array'],

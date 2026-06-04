@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -179,14 +180,14 @@ class ProductSyncService
 
     private function validateProductData(User $actor, array $row, ?Product $product): array
     {
-        $required = $product ? 'sometimes' : 'required';
+        $requiredOnCreate = $product ? 'sometimes' : 'required';
         $maxImages = max(1, (int) config('kistbook.product_sync.max_images_per_product', 12));
         $data = Validator::make($row, [
-            'brand_name' => [$required, 'string', 'max:255'],
-            'product_name' => [$required, 'string', 'max:255'],
-            'code' => [$required, 'string', 'max:100', Rule::unique('products', 'code')->where('company_id', $actor->company_id)->ignore($product?->uuid, 'uuid')],
-            'base_price' => [$required, 'numeric', 'min:0'],
-            'sales_price' => [$required, 'numeric', 'min:0'],
+            'brand_name' => ['nullable', 'string', 'max:255'],
+            'product_name' => [$requiredOnCreate, 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:100', Rule::unique('products', 'code')->where('company_id', $actor->company_id)->ignore($product?->uuid, 'uuid')],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
+            'sales_price' => [$requiredOnCreate, 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'primary_category_uuid' => ['nullable', 'uuid', Rule::exists('product_categories', 'uuid')->where('company_id', $actor->company_id)],
             'category_uuids' => ['nullable', 'array'],
@@ -204,21 +205,35 @@ class ProductSyncService
             'variants.*.attributes.*.value' => ['required', 'string', 'max:255'],
         ])->validate();
 
+        if ($product === null) {
+            $data['brand_name'] = $data['brand_name'] ?? '';
+            $data['code'] = $data['code'] ?? $this->generateSku($actor);
+            $data['base_price'] = $data['base_price'] ?? $data['sales_price'];
+        } elseif (array_key_exists('sales_price', $data) && ! array_key_exists('base_price', $data)) {
+            $data['base_price'] = $data['sales_price'];
+        }
+
         return $data;
     }
 
     private function normalize(array $row): array
     {
-        $basePrice = $row['basePrice'] ?? $row['base_price'] ?? $row['sales_price'] ?? null;
+        $salesPrice = $row['salesPrice']
+            ?? $row['sales_price']
+            ?? $row['basePrice']
+            ?? $row['base_price']
+            ?? $row['salePrice']
+            ?? $row['sale_price']
+            ?? null;
 
         return array_filter([
             'server_id' => $row['serverId'] ?? $row['server_id'] ?? $row['id'] ?? null,
             'updated_at' => $row['updatedAt'] ?? $row['updated_at'] ?? null,
             'brand_name' => $row['brandName'] ?? $row['brand_name'] ?? null,
             'product_name' => $row['productName'] ?? $row['product_name'] ?? null,
-            'code' => $row['skuCode'] ?? $row['code'] ?? null,
-            'base_price' => $basePrice,
-            'sales_price' => $basePrice,
+            'code' => $this->filledString($row['skuCode'] ?? $row['code'] ?? null),
+            'base_price' => $row['basePrice'] ?? $row['base_price'] ?? null,
+            'sales_price' => $salesPrice,
             'notes' => $row['notes'] ?? null,
             'primary_category_uuid' => $row['categoryId'] ?? $row['primary_category_uuid'] ?? null,
             'category_uuids' => $row['categoryIds'] ?? $row['category_uuids'] ?? null,
@@ -254,6 +269,17 @@ class ProductSyncService
         ] : $variant, $variants);
     }
 
+    private function filledString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
     private function deletionAcknowledgement(Product $product): array
     {
         return [
@@ -262,6 +288,18 @@ class ProductSyncService
             'syncStatus' => 'synced',
             'isDeleted' => true,
         ];
+    }
+
+    private function generateSku(User $actor): string
+    {
+        do {
+            $code = 'PRD-'.Str::upper(Str::random(10));
+        } while (Product::query()
+            ->where('company_id', $actor->company_id)
+            ->where('code', $code)
+            ->exists());
+
+        return $code;
     }
 
     private function serialize(Product $product): array
@@ -273,7 +311,7 @@ class ProductSyncService
             'brandName' => $product->brand_name,
             'productName' => $product->product_name,
             'skuCode' => $product->code,
-            'basePrice' => (float) ($product->base_price ?? $product->sales_price),
+            'salesPrice' => (float) $product->sales_price,
             'notes' => $product->notes,
             'productImages' => $product->images->map(fn (ProductImage $image): array => [
                 'serverId' => $image->uuid,

@@ -168,7 +168,7 @@ class BackendExpansionApiTest extends TestCase
                 'brandName' => 'Gree',
                 'productName' => 'Inverter AC',
                 'skuCode' => 'GREE-AC',
-                'basePrice' => 185000,
+                'salesPrice' => 185000,
                 'variants' => [[
                     'skuCode' => 'GREE-AC-15T-PULAR',
                     'salePrice' => 190000,
@@ -182,7 +182,7 @@ class BackendExpansionApiTest extends TestCase
 
         $create
             ->assertOk()
-            ->assertJsonPath('synced.0.basePrice', 185000)
+            ->assertJsonPath('synced.0.salesPrice', 185000)
             ->assertJsonPath('synced.0.variants.0.attributes.0.name', 'Capacity');
 
         $productUuid = $create->json('mappings.0.serverId');

@@ -168,7 +168,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"categoryId\": \"{{category_id}}\",\n      \"brandName\": \"Oppo\",\n      \"productName\": \"Reno 13\",\n      \"skuCode\": \"OPPO-R13\",\n      \"basePrice\": 145000,\n      \"notes\": \"Offline product\",\n      \"productImages\": [\n        {\n          \"imageBase64\": \"{{product_image_base64}}\",\n          \"originalName\": \"reno-13.jpg\",\n          \"mimeType\": \"image/jpeg\"\n        }\n      ],\n      \"variants\": [\n        {\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 145000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"productName\": \"Reno 13\",\n      \"salesPrice\": 145000,\n      \"notes\": \"Offline product\",\n      \"variants\": [\n        {\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 145000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
             "url": { "raw": "{{base_url}}/products/sync", "host": ["{{base_url}}"], "path": ["products", "sync"] }
           }
         },
@@ -177,7 +177,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"serverId\": \"{{product_id}}\",\n      \"productName\": \"Reno 13 Updated\",\n      \"basePrice\": 150000,\n      \"variants\": [\n        {\n          \"serverId\": \"{{variant_id}}\",\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 150000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"products\": [\n    {\n      \"serverId\": \"{{product_id}}\",\n      \"productName\": \"Reno 13 Updated\",\n      \"salesPrice\": 150000,\n      \"variants\": [\n        {\n          \"serverId\": \"{{variant_id}}\",\n          \"skuCode\": \"OPPO-R13-BLK-256\",\n          \"salePrice\": 150000,\n          \"attributes\": [\n            { \"name\": \"Color\", \"value\": \"Black\" },\n            { \"name\": \"Storage\", \"value\": \"256GB\" },\n            { \"name\": \"RAM\", \"value\": \"8GB\" }\n          ]\n        }\n      ]\n    }\n  ]\n}" },
             "url": { "raw": "{{base_url}}/products/sync", "host": ["{{base_url}}"], "path": ["products", "sync"] }
           }
         },

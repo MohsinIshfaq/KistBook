@@ -11,7 +11,7 @@ class ProductResource extends JsonResource
     {
         return [
             'uuid' => $this->uuid,
-            'basePrice' => (float) ($this->base_price ?? $this->sales_price),
+            'salesPrice' => (float) $this->sales_price,
             'skuCode' => $this->code,
             'brandName' => $this->brand_name,
             'productName' => $this->product_name,

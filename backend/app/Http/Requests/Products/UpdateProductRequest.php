@@ -14,7 +14,7 @@ class UpdateProductRequest extends FormRequest
             'brand_name' => 'brandName',
             'product_name' => 'productName',
             'code' => 'skuCode',
-            'base_price' => 'basePrice',
+            'sales_price' => 'salesPrice',
             'primary_category_uuid' => 'categoryId',
             'category_uuids' => 'categoryIds',
             'image_uuids' => 'imageUuids',
@@ -26,6 +26,9 @@ class UpdateProductRequest extends FormRequest
         }
         if (! $this->has('category_uuids') && ! array_key_exists('category_uuids', $aliases) && $this->has('categoryUuids')) {
             $aliases['category_uuids'] = $this->input('categoryUuids');
+        }
+        if (! $this->has('base_price') && $this->has('basePrice')) {
+            $aliases['base_price'] = $this->input('basePrice');
         }
         if (! $this->has('sales_price') && (array_key_exists('base_price', $aliases) || $this->has('base_price'))) {
             $aliases['sales_price'] = $aliases['base_price'] ?? $this->input('base_price');
@@ -50,7 +53,7 @@ class UpdateProductRequest extends FormRequest
         $uuid = $this->route('uuid');
 
         return [
-            'brand_name' => ['sometimes', 'string', 'max:255'],
+            'brand_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'product_name' => ['sometimes', 'string', 'max:255'],
             'code' => ['sometimes', 'string', 'max:100', Rule::unique('products', 'code')->where('company_id', $this->user()?->company_id)->ignore($uuid, 'uuid')],
             'sales_price' => ['sometimes', 'numeric', 'min:0'],

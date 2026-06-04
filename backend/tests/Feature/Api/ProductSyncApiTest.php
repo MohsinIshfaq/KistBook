@@ -30,7 +30,7 @@ class ProductSyncApiTest extends TestCase
                     'brandName' => 'Gree',
                     'productName' => 'Inverter AC',
                     'skuCode' => 'SYNC-GREE-AC',
-                    'basePrice' => 185000,
+                    'salesPrice' => 185000,
                     'notes' => 'Offline product',
                     'productImages' => [[
                         'imageBase64' => base64_encode('ac-image'),
@@ -47,10 +47,8 @@ class ProductSyncApiTest extends TestCase
                     ]],
                 ],
                 [
-                    'brandName' => 'Samsung',
                     'productName' => 'Smart LED',
-                    'skuCode' => 'SYNC-LED-55',
-                    'basePrice' => 125000,
+                    'salesPrice' => 125000,
                 ],
             ],
         ]);
@@ -62,8 +60,12 @@ class ProductSyncApiTest extends TestCase
             ->assertJsonPath('mappings.0.index', 0)
             ->assertJsonPath('mappings.1.index', 1)
             ->assertJsonPath('synced.0.categoryId', $category->uuid)
+            ->assertJsonPath('synced.0.salesPrice', 185000)
+            ->assertJsonPath('synced.1.productName', 'Smart LED')
+            ->assertJsonPath('synced.1.salesPrice', 125000)
             ->assertJsonPath('synced.0.variants.0.attributes.0.name', 'Capacity')
             ->assertJsonPath('synced.0.isSync', true);
+        $this->assertArrayNotHasKey('basePrice', $create->json('synced.0'));
 
         $firstServerId = $create->json('mappings.0.serverId');
         $secondServerId = $create->json('mappings.1.serverId');
@@ -75,7 +77,7 @@ class ProductSyncApiTest extends TestCase
             'products' => [[
                 'serverId' => $firstServerId,
                 'productName' => 'Inverter AC Updated',
-                'basePrice' => 192000,
+                'salesPrice' => 192000,
                 'productImages' => [[
                     'imageBase64' => base64_encode('updated-ac-image'),
                     'originalName' => 'updated-ac.jpg',
@@ -95,7 +97,7 @@ class ProductSyncApiTest extends TestCase
         $update
             ->assertOk()
             ->assertJsonPath('synced.0.productName', 'Inverter AC Updated')
-            ->assertJsonPath('synced.0.basePrice', 192000)
+            ->assertJsonPath('synced.0.salesPrice', 192000)
             ->assertJsonCount(1, 'synced.0.productImages')
             ->assertJsonCount(1, 'synced.0.variants.0.attributes')
             ->assertJsonPath('synced.0.variants.0.attributes.0.name', 'Series');
@@ -186,13 +188,11 @@ class ProductSyncApiTest extends TestCase
         $this->postJson('/api/products/sync', [
             'products' => [
                 [
-                    'brandName' => 'Oppo',
                     'productName' => 'Reno 13',
-                    'skuCode' => 'SYNC-OPPO-R13',
-                    'basePrice' => 145000,
+                    'salesPrice' => 145000,
                 ],
                 [
-                    'brandName' => 'Incomplete',
+                    'productName' => 'Incomplete',
                 ],
             ],
         ])
