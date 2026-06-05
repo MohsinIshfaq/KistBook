@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\UserCustomerAccess;
+use App\Models\UserPlanAccess;
 
 class CustomerPolicy
 {
@@ -43,10 +44,18 @@ class CustomerPolicy
             return true;
         }
 
-        return UserCustomerAccess::query()
+        if (UserCustomerAccess::query()
             ->where('user_uuid', $user->uuid)
             ->where('customer_uuid', $customer->uuid)
             ->where('is_deleted', false)
+            ->exists()) {
+            return true;
+        }
+
+        return UserPlanAccess::query()
+            ->where('user_uuid', $user->uuid)
+            ->where('is_deleted', false)
+            ->whereHas('plan', fn ($query) => $query->where('customer_uuid', $customer->uuid))
             ->exists();
     }
 }

@@ -4,7 +4,10 @@ namespace Tests\Feature\Api;
 
 use App\Models\Customer;
 use App\Models\CustomerSyncMapping;
+use App\Models\Plan;
+use App\Models\Product;
 use App\Models\User;
+use App\Models\UserPlanAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -268,6 +271,31 @@ class CustomerSyncApiTest extends TestCase
             ->pluck('serverId');
         $this->assertCount(11, $serverIds);
         $this->assertCount(11, $serverIds->unique());
+    }
+
+    public function test_salesman_downloads_customer_when_only_plan_is_assigned(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $salesman = User::factory()->create(['company_id' => $owner->company_id]);
+        $customer = Customer::factory()->create(['company_id' => $owner->company_id]);
+        $product = Product::factory()->create(['company_id' => $owner->company_id]);
+        $plan = Plan::factory()->create([
+            'company_id' => $owner->company_id,
+            'customer_uuid' => $customer->uuid,
+            'product_uuid' => $product->uuid,
+        ]);
+        UserPlanAccess::query()->create([
+            'company_id' => $owner->company_id,
+            'user_uuid' => $salesman->uuid,
+            'plan_uuid' => $plan->uuid,
+            'is_deleted' => false,
+        ]);
+        Sanctum::actingAs($salesman);
+
+        $this->getJson('/api/customers/sync?lastUpdatedAt=2001-01-01T00:00:00.000Z')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.serverId', $customer->uuid);
     }
 
     public function test_newer_server_customer_is_returned_as_conflict(): void

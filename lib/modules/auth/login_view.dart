@@ -205,7 +205,7 @@ class _LoginViewState extends State<LoginView> {
 
     final user = await AppLoadingOverlay.run(
       context,
-      message: 'Logging in...',
+      message: 'Logging in and loading assigned data...',
       task: () => controller.login(
         login: login,
         password: password,

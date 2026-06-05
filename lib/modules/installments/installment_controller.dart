@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 
 import 'package:get/get.dart';
 
@@ -12,6 +13,7 @@ import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../services/access_control_service.dart';
 import '../../services/background_service.dart';
+import '../../services/sync_change_notifier.dart';
 
 class InstallmentController extends GetxController {
   InstallmentController({
@@ -34,11 +36,19 @@ class InstallmentController extends GetxController {
   List<ProductModel> products = [];
   Map<int, CustomerPaymentInsight> customerInsights = {};
   bool isLoading = false;
+  StreamSubscription<SyncResource>? _syncSubscription;
 
   @override
   void onInit() {
     super.onInit();
+    _subscribeToSyncChanges();
     loadData();
+  }
+
+  @override
+  void onClose() {
+    _syncSubscription?.cancel();
+    super.onClose();
   }
 
   Future<void> loadData() async {
@@ -113,6 +123,19 @@ class InstallmentController extends GetxController {
     if (Get.isRegistered<BackgroundService>()) {
       Get.find<BackgroundService>().requestSync();
     }
+  }
+
+  void _subscribeToSyncChanges() {
+    if (!Get.isRegistered<SyncChangeNotifier>()) {
+      return;
+    }
+    _syncSubscription = Get.find<SyncChangeNotifier>().stream.listen((
+      resource,
+    ) {
+      if (resource == SyncResource.installmentPlans && !isLoading) {
+        loadData();
+      }
+    });
   }
 }
 

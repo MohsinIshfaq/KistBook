@@ -66,10 +66,10 @@ class UserModel {
     return UserModel(
       id: json.intValue('id'),
       uuid: _firstString(json, ['uuid', 'server_id']),
-      companyId: json.intValue('company_id'),
+      companyId: _firstInt(json, ['company_id', 'companyId']),
       name: json.stringValue('name'),
       email: json.asString('email'),
-      phone: json.asString('phone'),
+      phone: _firstString(json, ['phone', 'phoneNumber']),
       firstName: _firstString(json, ['first_name', 'firstName']),
       lastName: _firstString(json, ['last_name', 'lastName']),
       userLevel: _firstString(json, ['access_level', 'user_level', 'role']),
@@ -79,8 +79,8 @@ class UserModel {
           : json.has('isActive')
           ? json.asBool('isActive')
           : json.asString('status') == 'active',
-      createdAt: json.asString('created_at'),
-      updatedAt: json.asString('updated_at'),
+      createdAt: _firstString(json, ['created_at', 'createdAt']),
+      updatedAt: _firstString(json, ['updated_at', 'updatedAt']),
     );
   }
 
@@ -109,5 +109,15 @@ class UserModel {
       }
     }
     return null;
+  }
+
+  static int _firstInt(DartJson json, List<String> keys) {
+    for (final key in keys) {
+      final value = json.asInt(key);
+      if (value != null) {
+        return value;
+      }
+    }
+    return 0;
   }
 }

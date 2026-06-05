@@ -243,6 +243,45 @@
           }
         },
         {
+          "name": "Installment Plan Sync Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/installment-plans/sync?lastUpdatedAt=2001-01-01T00:00:00.000Z&limit=10", "host": ["{{base_url}}"], "path": ["installment-plans", "sync"], "query": [{ "key": "lastUpdatedAt", "value": "2001-01-01T00:00:00.000Z" }, { "key": "lastServerId", "value": "", "disabled": true }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Installment Plan Sync Upload - Create",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json.synced && json.synced[0] && json.synced[0].serverId) { pm.environment.set('installment_plan_id', json.synced[0].serverId); }"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plans\": [\n    {\n      \"customerId\": \"{{customer_id}}\",\n      \"mode\": \"common\",\n      \"selectedProducts\": [\n        { \"productId\": \"{{product_id}}\", \"quantity\": 1, \"agreedPrice\": 10000 }\n      ],\n      \"commonDeposit\": 1000,\n      \"commonInstallmentAmount\": 3000,\n      \"commonFrequencyInDays\": 30,\n      \"commonFirstDueDate\": \"2026-06-01\",\n      \"note\": \"Offline mobile plan\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans/sync", "host": ["{{base_url}}"], "path": ["installment-plans", "sync"] }
+          }
+        },
+        {
+          "name": "Installment Plan Sync Upload - Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plans\": [\n    {\n      \"serverId\": \"{{installment_plan_id}}\",\n      \"customerId\": \"{{customer_id}}\",\n      \"mode\": \"common\",\n      \"selectedProducts\": [\n        { \"productId\": \"{{product_id}}\", \"quantity\": 1, \"agreedPrice\": 10000 }\n      ],\n      \"commonDeposit\": 1200,\n      \"commonInstallmentAmount\": 3000,\n      \"commonFrequencyInDays\": 30,\n      \"commonFirstDueDate\": \"2026-06-01\",\n      \"note\": \"Updated offline mobile plan\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans/sync", "host": ["{{base_url}}"], "path": ["installment-plans", "sync"] }
+          }
+        },
+        {
+          "name": "Installment Plan Sync Upload - Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plans\": [\n    { \"serverId\": \"{{installment_plan_id}}\" }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/installment-plans/sync", "host": ["{{base_url}}"], "path": ["installment-plans", "sync"] }
+          }
+        },
+        {
           "name": "Installment Plan List",
           "request": {
             "method": "GET",

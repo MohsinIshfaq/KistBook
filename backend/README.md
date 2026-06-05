@@ -155,14 +155,19 @@ Customer add, edit, and delete operations are intentionally local-first. Mutatio
 - `PUT /api/products/sync` update between 1 and 10 products
 - `DELETE /api/products/sync` delete between 1 and 10 products
 
-Product mutation requests send only a `products` array. HTTP methods define the action. Create requires only `productName` and `salesPrice`; `categoryId`, `productImages`, `brandName`, and `skuCode` are optional. Update and delete rows send `serverId`. Product images use optional base64 `productImages` entries. Sending `productImages` in a `PUT` row replaces the current images; omitting it preserves existing images. Sending `variants` in a `PUT` row replaces the active generic variant set.
+Product mutation requests send only a `products` array. HTTP methods define the action. Create requires only `productName` and `salesPrice`; `categoryId`, `productImages`, `brandName`, and `skuCode` are optional. Update and delete rows send `serverId`. Product images use optional base64 `productImages` entries. Sending `productImages` in a `PUT` row replaces the current images; omitting it preserves existing images. Sending `variants` in a `PUT` row replaces the active generic variant set. Product create/update records price history on the backend, and product detail/sync responses include `priceHistory`.
 
 ### Canonical Installment Plans
 
 - `GET|POST /api/installment-plans`
 - `GET|PUT|PATCH|DELETE /api/installment-plans/{uuid}`
+- `GET /api/installment-plans/sync?lastUpdatedAt=...&limit=10` download up to 10 active plans with schedules
+- `POST /api/installment-plans/sync` create between 1 and 10 local plans
+- `PUT /api/installment-plans/sync` update between 1 and 10 server plans
+- `DELETE /api/installment-plans/sync` soft-delete between 1 and 10 server plans
+- `/api/plans/sync` is an alias for the same sync endpoints
 
-Canonical installment plans support multiple products, a common schedule, or separate per-product schedules. Existing `/api/plans`, `/api/installments`, and generic `/api/sync/*` routes remain available for Flutter compatibility.
+Canonical installment plans support multiple products, a common schedule, or separate per-product schedules. Sync responses include `selectedProducts`, generated `schedules`, `serverId`, `isSync`, timestamps, and cursor metadata. Existing `/api/plans`, `/api/installments`, and generic `/api/sync/*` routes remain available for Flutter compatibility; the app now uses dedicated customer, product, and installment-plan sync first, then legacy sync for payments/access support.
 
 ### API Documentation And Postman
 

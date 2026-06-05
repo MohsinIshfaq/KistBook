@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../core/utils/currency_helper.dart';
+import '../../data/models/product_model.dart';
 import 'product_controller.dart';
 import 'product_image_preview_view.dart';
 
@@ -80,6 +81,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     label: 'Current price'.tr,
                     value: CurrencyHelper.pkr.format(product.salePrice),
                   ),
+                  if (product.variants.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _variantSection(context, product: product),
+                  ],
                   const SizedBox(height: 14),
                   _detailRow(
                     context,
@@ -306,6 +311,100 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _variantSection(
+    BuildContext context, {
+    required ProductModel product,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: theme.brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.surfaceTint,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.tune_rounded,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Variants'.tr,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...product.variants.map(
+                (variant) => Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              variant.sku,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            CurrencyHelper.pkr.format(variant.salePrice),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (variant.attributes.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: variant.attributes
+                              .map(
+                                (attribute) => Chip(
+                                  label: Text(
+                                    '${attribute.name}: ${attribute.value}',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ],

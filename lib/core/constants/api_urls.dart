@@ -47,6 +47,7 @@ class API {
   static final String URL_LOGIN = urlFormatter(api: 'auth/login');
   static final String URL_LOGOUT = urlFormatter(api: 'auth/logout');
   static final String URL_PROFILE = urlFormatter(api: 'auth/profile');
+  static final String URL_BOOTSTRAP = urlFormatter(api: 'bootstrap');
   static final String URL_CREATE_COMPANY_USER = urlFormatter(
     api: 'company/users',
   );
@@ -63,8 +64,16 @@ class API {
     api: 'access/customer',
   );
   static final String URL_ACCESS_PLAN = urlFormatter(api: 'access/plan');
+  static final String URL_ACCESS_ASSIGNMENTS = urlFormatter(
+    api: 'access/assignments',
+  );
   static final String URL_SYNC_UPLOAD = urlFormatter(api: 'sync/upload');
   static final String URL_SYNC_DOWNLOAD = urlFormatter(api: 'sync/download');
+  static final String URL_CUSTOMER_SYNC = urlFormatter(api: 'customers/sync');
+  static final String URL_PRODUCT_SYNC = urlFormatter(api: 'products/sync');
+  static final String URL_INSTALLMENT_PLAN_SYNC = urlFormatter(
+    api: 'installment-plans/sync',
+  );
 
   static String URL_CUSTOMER_DETAIL(String customerId) {
     return urlFormatter(api: 'customers/$customerId');

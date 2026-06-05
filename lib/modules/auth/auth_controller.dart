@@ -4,11 +4,14 @@ import '../../app/routes/app_routes.dart';
 import '../../core/services/api_services.dart';
 import '../../core/utils/id_generator.dart';
 import '../../core/widgets/banner_alert.dart';
+import '../../data/database/db_helper.dart';
 import '../../data/models/company_model.dart';
 import '../../data/models/local_user_model.dart';
 import '../../data/models/login_response_model.dart';
 import '../../data/models/user_model.dart';
+import '../../data/repositories/runtime_bootstrap_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../data/sync/sync_cursor_store.dart';
 import '../../services/auth_api_service.dart';
 import '../../services/background_service.dart';
 import '../../services/session_manager.dart';
@@ -18,13 +21,22 @@ class AuthController extends GetxController {
     required UserRepository userRepository,
     required SessionManager sessionManager,
     required AuthApiService authApiService,
+    required DbHelper dbHelper,
+    required SyncCursorStore syncCursorStore,
+    required RuntimeBootstrapRepository runtimeBootstrapRepository,
   }) : _userRepository = userRepository,
        _sessionManager = sessionManager,
-       _authApiService = authApiService;
+       _authApiService = authApiService,
+       _dbHelper = dbHelper,
+       _syncCursorStore = syncCursorStore,
+       _runtimeBootstrapRepository = runtimeBootstrapRepository;
 
   final UserRepository _userRepository;
   final SessionManager _sessionManager;
   final AuthApiService _authApiService;
+  final DbHelper _dbHelper;
+  final SyncCursorStore _syncCursorStore;
+  final RuntimeBootstrapRepository _runtimeBootstrapRepository;
 
   final RxBool isLoginLoading = false.obs;
   final RxBool isSignupLoading = false.obs;
@@ -97,10 +109,13 @@ class AuthController extends GetxController {
         return null;
       }
 
+      final existingRemoteUser =
+          localUser ??
+          await _userRepository.findByServerIdentity(remote.user!.serverId);
       final syncedUser = await _saveRemoteUser(
         remote,
         password: password,
-        existing: localUser,
+        existing: existingRemoteUser,
       );
       await _sessionManager.saveData(syncedUser);
       await _saveRemoteSession(remote, syncedUser);
@@ -269,7 +284,7 @@ class AuthController extends GetxController {
     } catch (_) {
       warning = 'The server returned an invalid response.';
     } finally {
-      await _clearLocalSession();
+      await _clearLocalSession(resetLocalDatabase: true);
       isLogoutLoading.value = false;
       update();
       Get.offAllNamed(AppRoutes.login);
@@ -386,12 +401,22 @@ class AuthController extends GetxController {
   }
 
   Future<void> _completeLogin() async {
+    if (_sessionManager.hasApiSession) {
+      await _runtimeBootstrapRepository.bootstrap();
+    }
     await Get.find<BackgroundService>().start();
     Get.offAllNamed(_sessionManager.homeRoute);
   }
 
-  Future<void> _clearLocalSession() async {
-    Get.find<BackgroundService>().dispose();
+  Future<void> _clearLocalSession({bool resetLocalDatabase = false}) async {
+    final backgroundService = Get.find<BackgroundService>();
+    if (resetLocalDatabase) {
+      await backgroundService.stop(waitForSync: true);
+      await _syncCursorStore.clearAll();
+      await _dbHelper.resetDatabase();
+    } else {
+      backgroundService.dispose();
+    }
     await _sessionManager.clearAuthData();
     currentUser.value = null;
   }

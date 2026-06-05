@@ -21,19 +21,30 @@ class BackgroundService {
   Timer? _dailyReportTimer;
   Timer? _syncRetryTimer;
 
-  Future<void> start() async {
-    _dailyReportTimer?.cancel();
-    _syncRetryTimer?.cancel();
+  Future<void> start({bool waitForInitialSync = false}) async {
+    _cancelTimers();
+    _syncService.resume();
     _scheduleNextReportTick();
-    requestSync();
+    if (waitForInitialSync) {
+      await _syncService.syncNow();
+    } else {
+      requestSync();
+    }
     _syncRetryTimer = Timer.periodic(
-      const Duration(minutes: 5),
+      const Duration(minutes: 1),
       (_) => requestSync(),
     );
   }
 
   void requestSync() {
     unawaited(_syncService.syncNow());
+  }
+
+  Future<void> stop({bool waitForSync = false}) async {
+    _cancelTimers();
+    if (waitForSync) {
+      await _syncService.stop();
+    }
   }
 
   void _scheduleNextReportTick() {
@@ -52,6 +63,10 @@ class BackgroundService {
   }
 
   void dispose() {
+    _cancelTimers();
+  }
+
+  void _cancelTimers() {
     _dailyReportTimer?.cancel();
     _syncRetryTimer?.cancel();
   }

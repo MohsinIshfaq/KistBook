@@ -4,6 +4,7 @@ import '../../core/constants/app_enums.dart';
 import '../../data/models/customer_model.dart';
 import '../../data/models/local_user_model.dart';
 import '../../data/models/purchase_plan_model.dart';
+import '../../data/datasources/access_assignment_remote_data_source.dart';
 import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/user_repository.dart';
@@ -17,21 +18,26 @@ class UserController extends GetxController {
     required CustomerRepository customerRepository,
     required InstallmentRepository installmentRepository,
     required AuthApiService authApiService,
+    required AccessAssignmentRemoteDataSource accessAssignmentRemoteDataSource,
   }) : _userRepository = userRepository,
        _customerRepository = customerRepository,
        _installmentRepository = installmentRepository,
-       _authApiService = authApiService;
+       _authApiService = authApiService,
+       _accessAssignmentRemoteDataSource = accessAssignmentRemoteDataSource;
 
   final UserRepository _userRepository;
   final CustomerRepository _customerRepository;
   final InstallmentRepository _installmentRepository;
   final AuthApiService _authApiService;
+  final AccessAssignmentRemoteDataSource _accessAssignmentRemoteDataSource;
 
   List<LocalUserModel> users = [];
   List<CustomerModel> customers = [];
   List<PurchasePlanModel> plans = [];
   Set<int> assignedCustomerIds = <int>{};
   Set<int> assignedPlanIds = <int>{};
+  Map<int, String> planAssigneesByPlanId = {};
+  LocalUserModel? assignmentUser;
   bool isLoading = false;
 
   @override
@@ -58,6 +64,9 @@ class UserController extends GetxController {
   Future<void> loadAssignmentData({required LocalUserModel user}) async {
     isLoading = true;
     update();
+    assignmentUser = user;
+    users = await _userRepository.fetchUsers();
+    users = users.where((item) => item.role != UserRole.owner).toList();
     customers = await _customerRepository.fetchCustomers();
     plans = await _installmentRepository.fetchAllPlans();
 
@@ -73,6 +82,9 @@ class UserController extends GetxController {
         .map((item) => int.tryParse(item.planUuid))
         .whereType<int>()
         .toSet();
+    planAssigneesByPlanId = await _userRepository.fetchActivePlanAssignees(
+      exceptUserUuid: user.uuid,
+    );
     isLoading = false;
     update();
   }
@@ -87,6 +99,9 @@ class UserController extends GetxController {
   }
 
   void togglePlan(int planId) {
+    if (isPlanAssignedToAnotherUser(planId)) {
+      return;
+    }
     if (assignedPlanIds.contains(planId)) {
       assignedPlanIds.remove(planId);
     } else {
@@ -96,10 +111,9 @@ class UserController extends GetxController {
   }
 
   void toggleAllPlansForCustomer(int customerId) {
-    final customerPlanIds = plans
-        .where((item) => item.customerId == customerId && item.id != null)
-        .map((item) => item.id!)
-        .toList();
+    final customerPlanIds = plansForCustomer(
+      customerId,
+    ).where((item) => item.id != null).map((item) => item.id!).toList();
     final allSelected =
         customerPlanIds.isNotEmpty &&
         customerPlanIds.every(assignedPlanIds.contains);
@@ -184,7 +198,41 @@ class UserController extends GetxController {
   }
 
   List<PurchasePlanModel> plansForCustomer(int customerId) {
-    return plans.where((item) => item.customerId == customerId).toList();
+    return plans
+        .where(
+          (item) =>
+              item.customerId == customerId &&
+              (item.id == null || !isPlanAssignedToAnotherUser(item.id!)),
+        )
+        .toList();
+  }
+
+  int hiddenAssignedPlanCountForCustomer(int customerId) {
+    return plans
+        .where(
+          (item) =>
+              item.customerId == customerId &&
+              item.id != null &&
+              isPlanAssignedToAnotherUser(item.id!),
+        )
+        .length;
+  }
+
+  bool isPlanAssignedToAnotherUser(int planId) {
+    return planAssigneesByPlanId.containsKey(planId);
+  }
+
+  String? planAssignedUserName(int planId) {
+    final userUuid = planAssigneesByPlanId[planId];
+    if (userUuid == null) {
+      return null;
+    }
+    for (final user in users) {
+      if (user.uuid == userUuid) {
+        return user.fullName;
+      }
+    }
+    return 'another salesman';
   }
 
   bool isAllPlansAssignedForCustomer(int customerId) {
@@ -198,12 +246,44 @@ class UserController extends GetxController {
   }
 
   Future<void> saveAssignmentsForUser(LocalUserModel user) async {
-    await _userRepository.saveAssignments(
-      userUuid: user.uuid,
-      customerIds: assignedCustomerIds.toList(),
-      planIds: assignedPlanIds.toList(),
-    );
-    _requestSync();
+    final blockedPlanIds = assignedPlanIds
+        .where(isPlanAssignedToAnotherUser)
+        .toList();
+    if (blockedPlanIds.isNotEmpty) {
+      final names = blockedPlanIds
+          .map((planId) => planAssignedUserName(planId) ?? 'another salesman')
+          .toSet()
+          .join(', ');
+      throw StateError(
+        'Selected plan is already assigned to $names. Remove it from that user first.',
+      );
+    }
+    isLoading = true;
+    update();
+    try {
+      final customerIds = assignedCustomerIds.toList();
+      final planIds = assignedPlanIds.toList();
+      final result = await _accessAssignmentRemoteDataSource.replaceAssignments(
+        userId: await _userRepository.serverIdForUserUuid(user.uuid),
+        customerIds: await _userRepository.customerServerIdsForLocalIds(
+          customerIds,
+        ),
+        planIds: await _userRepository.planServerIdsForLocalIds(planIds),
+      );
+      await _userRepository.replaceAssignmentsFromServer(
+        userUuid: user.uuid,
+        customerAccess: result.customerAccess,
+        planAccess: result.planAccess,
+      );
+      assignedCustomerIds = customerIds.toSet();
+      assignedPlanIds = planIds.toSet();
+      planAssigneesByPlanId = await _userRepository.fetchActivePlanAssignees(
+        exceptUserUuid: user.uuid,
+      );
+    } finally {
+      isLoading = false;
+      update();
+    }
   }
 
   void _requestSync() {

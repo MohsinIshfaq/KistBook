@@ -16,9 +16,14 @@ import '../models/plan_user_access_model.dart';
 import '../models/product_image_model.dart';
 import '../models/product_model.dart';
 import '../models/product_price_history_model.dart';
+import '../models/product_variant_attribute_model.dart';
+import '../models/product_variant_model.dart';
 import '../models/purchase_plan_model.dart';
 
 class DbHelper {
+  DbHelper({String? databasePath}) : _databasePath = databasePath;
+
+  final String? _databasePath;
   Database? _database;
   Future<void> _writeQueue = Future<void>.value();
 
@@ -30,13 +35,24 @@ class DbHelper {
     await database;
   }
 
+  Future<void> resetDatabase() async {
+    await _writeQueue.catchError((_) {});
+    final path = await _databaseFilePath();
+    final existing = _database;
+    _database = null;
+    if (existing != null && existing.isOpen) {
+      await existing.close();
+    }
+    await databaseFactory.deleteDatabase(path);
+    await database;
+  }
+
   Future<Database> get database async {
     if (_database != null) {
       return _database!;
     }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final path = p.join(directory.path, DbConstants.databaseName);
+    final path = await _databaseFilePath();
 
     _database = await openDatabase(
       path,
@@ -175,10 +191,21 @@ class DbHelper {
             "email TEXT NOT NULL DEFAULT ''",
           );
         }
+        if (oldVersion < 14) {
+          await _applyCustomerProductApiSchema(db);
+        }
       },
     );
 
     return _database!;
+  }
+
+  Future<String> _databaseFilePath() async {
+    return _databasePath ??
+        p.join(
+          (await getApplicationDocumentsDirectory()).path,
+          DbConstants.databaseName,
+        );
   }
 
   Future<void> _createSchema(Database db) async {
@@ -187,6 +214,10 @@ class DbHelper {
       ProductModel.createTableQuery,
       ProductImageModel.createTableQuery,
       ProductImageModel.createProductIndexQuery,
+      ProductVariantModel.createTableQuery,
+      ProductVariantModel.createProductIndexQuery,
+      ProductVariantAttributeModel.createTableQuery,
+      ProductVariantAttributeModel.createVariantIndexQuery,
       ProductPriceHistoryModel.createTableQuery,
       LocalUserModel.createTableQuery,
       CustomerUserAccessModel.createTableQuery,
@@ -200,6 +231,61 @@ class DbHelper {
       await db.execute(query);
     }
     await _ensureSyncMetadata(db);
+    await _applyCustomerProductApiSchema(db);
+  }
+
+  Future<void> _applyCustomerProductApiSchema(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      DbConstants.customers,
+      'customer_image_url TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.customers,
+      'customer_image_path TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.customers,
+      'customer_image_original_name TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.customers,
+      'customer_image_mime_type TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.customers,
+      'customer_image_size INTEGER',
+    );
+    await _addColumnIfMissing(db, DbConstants.productImages, 'remote_url TEXT');
+    await _addColumnIfMissing(
+      db,
+      DbConstants.productImages,
+      'original_name TEXT',
+    );
+    await _addColumnIfMissing(db, DbConstants.productImages, 'mime_type TEXT');
+    await _addColumnIfMissing(
+      db,
+      DbConstants.productImages,
+      'image_size INTEGER',
+    );
+    await db.execute(
+      ProductVariantModel.createTableQuery.replaceFirst(
+        'CREATE TABLE',
+        'CREATE TABLE IF NOT EXISTS',
+      ),
+    );
+    await db.execute(ProductVariantModel.createProductIndexQuery);
+    await db.execute(
+      ProductVariantAttributeModel.createTableQuery.replaceFirst(
+        'CREATE TABLE',
+        'CREATE TABLE IF NOT EXISTS',
+      ),
+    );
+    await db.execute(ProductVariantAttributeModel.createVariantIndexQuery);
   }
 
   Future<void> _ensureSyncMetadata(Database db) async {

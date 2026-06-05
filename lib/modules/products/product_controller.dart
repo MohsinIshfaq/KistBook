@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../data/models/product_model.dart';
 import '../../data/models/product_price_history_model.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../services/background_service.dart';
+import '../../services/sync_change_notifier.dart';
 
 class ProductController extends GetxController {
   ProductController({required ProductRepository productRepository})
@@ -17,6 +20,7 @@ class ProductController extends GetxController {
   List<String> selectedCategories = [];
   String searchQuery = '';
   bool isLoading = false;
+  StreamSubscription<SyncResource>? _syncSubscription;
 
   List<String> get categories {
     final values =
@@ -65,7 +69,14 @@ class ProductController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _listenForSyncChanges();
     loadProducts();
+  }
+
+  @override
+  void onClose() {
+    _syncSubscription?.cancel();
+    super.onClose();
   }
 
   Future<void> loadProducts() async {
@@ -121,5 +132,18 @@ class ProductController extends GetxController {
     if (Get.isRegistered<BackgroundService>()) {
       Get.find<BackgroundService>().requestSync();
     }
+  }
+
+  void _listenForSyncChanges() {
+    if (!Get.isRegistered<SyncChangeNotifier>()) {
+      return;
+    }
+    _syncSubscription = Get.find<SyncChangeNotifier>().stream.listen((
+      resource,
+    ) {
+      if (resource == SyncResource.products && !isLoading) {
+        unawaited(loadProducts());
+      }
+    });
   }
 }

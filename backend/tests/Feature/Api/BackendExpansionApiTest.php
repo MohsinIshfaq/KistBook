@@ -3,8 +3,12 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Customer;
+use App\Models\Installment;
+use App\Models\InstallmentPlanItem;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\UserPlanAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -207,5 +211,76 @@ class BackendExpansionApiTest extends TestCase
         $this->getJson('/api/products/sync')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+    }
+
+    public function test_runtime_bootstrap_returns_assigned_plan_customer_and_access_for_salesman(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $salesman = User::factory()->create(['company_id' => $owner->company_id]);
+        $customer = Customer::factory()->create(['company_id' => $owner->company_id]);
+        $product = Product::factory()->create(['company_id' => $owner->company_id]);
+        $plan = Plan::factory()->create([
+            'company_id' => $owner->company_id,
+            'customer_uuid' => $customer->uuid,
+            'product_uuid' => $product->uuid,
+            'mode' => 'common',
+            'quantity' => 1,
+            'unit_price' => 120000,
+            'total_amount' => 120000,
+            'deposit_amount' => 20000,
+            'remaining_amount' => 100000,
+            'installment_amount' => 10000,
+            'installment_count' => 10,
+            'frequency_days' => 30,
+            'start_date' => '2026-07-01',
+            'notes' => 'Assigned plan',
+        ]);
+        $item = InstallmentPlanItem::query()->create([
+            'company_id' => $owner->company_id,
+            'plan_uuid' => $plan->uuid,
+            'product_uuid' => $product->uuid,
+            'quantity' => 1,
+            'unit_price_snapshot' => 120000,
+            'total_amount' => 120000,
+            'deposit_amount' => 20000,
+            'installment_amount' => 10000,
+            'frequency_days' => 30,
+            'first_due_date' => '2026-07-01',
+            'item_name' => 'Assigned Product x1',
+            'is_deleted' => false,
+        ]);
+        Installment::query()->create([
+            'company_id' => $owner->company_id,
+            'plan_uuid' => $plan->uuid,
+            'plan_item_uuid' => $item->uuid,
+            'schedule_group' => 'common',
+            'sequence_number' => 1,
+            'item_sequence_number' => 1,
+            'scheduled_due_date' => '2026-07-01',
+            'current_due_date' => '2026-07-01',
+            'amount' => 10000,
+            'paid_amount' => 0,
+            'status' => 'pending',
+            'is_deleted' => false,
+        ]);
+        $access = UserPlanAccess::query()->create([
+            'company_id' => $owner->company_id,
+            'user_uuid' => $salesman->uuid,
+            'plan_uuid' => $plan->uuid,
+            'is_deleted' => false,
+        ]);
+
+        Sanctum::actingAs($salesman);
+
+        $this->getJson('/api/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('data.customers.0.serverId', $customer->uuid)
+            ->assertJsonPath('data.products.0.serverId', $product->uuid)
+            ->assertJsonPath('data.installmentPlans.0.serverId', $plan->uuid)
+            ->assertJsonPath('data.installmentPlans.0.selectedProducts.0.productId', $product->uuid)
+            ->assertJsonPath('data.planAccess.0.serverId', $access->uuid)
+            ->assertJsonPath('data.planAccess.0.planId', $plan->uuid)
+            ->assertJsonCount(1, 'data.customers')
+            ->assertJsonCount(1, 'data.installmentPlans');
     }
 }

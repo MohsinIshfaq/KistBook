@@ -33,9 +33,7 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Assign Access'.tr),
-      ),
+      appBar: AppBar(title: Text('Assign Access'.tr)),
       body: GetBuilder<UserController>(
         builder: (logic) {
           if (logic.isLoading) {
@@ -91,6 +89,9 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                   final customerPlans = customerId == null
                       ? const []
                       : logic.plansForCustomer(customerId);
+                  final hiddenAssignedPlanCount = customerId == null
+                      ? 0
+                      : logic.hiddenAssignedPlanCountForCustomer(customerId);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 14),
                     child: Padding(
@@ -106,7 +107,9 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            customer.phone.isEmpty ? customer.address : customer.phone,
+                            customer.phone.isEmpty
+                                ? customer.address
+                                : customer.phone,
                             style: theme.textTheme.bodySmall,
                           ),
                           const SizedBox(height: 12),
@@ -122,11 +125,15 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                               children: [
                                 CheckboxListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  value: customerId != null &&
-                                      logic.assignedCustomerIds.contains(customerId),
+                                  value:
+                                      customerId != null &&
+                                      logic.assignedCustomerIds.contains(
+                                        customerId,
+                                      ),
                                   title: Text('Assign customer'.tr),
                                   subtitle: Text(
-                                    'This user will see this customer in customer listing.'.tr,
+                                    'This user will see this customer in customer listing.'
+                                        .tr,
                                   ),
                                   onChanged: customerId == null
                                       ? null
@@ -134,15 +141,23 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                                 ),
                                 CheckboxListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  value: customerId != null &&
-                                      logic.isAllPlansAssignedForCustomer(customerId),
+                                  value:
+                                      customerId != null &&
+                                      logic.isAllPlansAssignedForCustomer(
+                                        customerId,
+                                      ),
                                   title: Text('Assign complete plans'.tr),
                                   subtitle: Text(
-                                    'Give access to all plans of this customer.'.tr,
+                                    'Give access to all plans of this customer.'
+                                        .tr,
                                   ),
-                                  onChanged: customerId == null || customerPlans.isEmpty
+                                  onChanged:
+                                      customerId == null ||
+                                          customerPlans.isEmpty
                                       ? null
-                                      : (_) => logic.toggleAllPlansForCustomer(customerId),
+                                      : (_) => logic.toggleAllPlansForCustomer(
+                                          customerId,
+                                        ),
                                 ),
                               ],
                             ),
@@ -170,6 +185,32 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                               ),
                             ),
                           ],
+                          if (hiddenAssignedPlanCount > 0) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.35,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                '$hiddenAssignedPlanCount plan(s) already assigned to another salesman. Remove from that user first to assign here.'
+                                    .tr,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -185,11 +226,27 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
                     showBannerAlert(
                       type: BannerStyle.error,
                       title: 'Validation Errors'.tr,
-                      messages: ['Assign at least one customer or one plan.'.tr],
+                      messages: [
+                        'Assign at least one customer or one plan.'.tr,
+                      ],
                     );
                     return;
                   }
-                  await controller.saveAssignmentsForUser(user);
+                  try {
+                    await controller.saveAssignmentsForUser(user);
+                  } catch (error) {
+                    if (!mounted) {
+                      return;
+                    }
+                    showBannerAlert(
+                      type: BannerStyle.error,
+                      title: 'Validation Errors'.tr,
+                      messages: [
+                        error.toString().replaceFirst('Bad state: ', ''),
+                      ],
+                    );
+                    return;
+                  }
                   if (!mounted) {
                     return;
                   }

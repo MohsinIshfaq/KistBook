@@ -267,10 +267,18 @@ class CustomerSyncService
     {
         return Customer::query()
             ->when($actor->isSalesman(), function (Builder $query) use ($actor): void {
-                $query->whereHas('users', function (Builder $query) use ($actor): void {
+                $query->where(function (Builder $query) use ($actor): void {
                     $query
-                        ->where('users.uuid', $actor->uuid)
-                        ->where('user_customer_access.is_deleted', false);
+                        ->whereHas('users', function (Builder $query) use ($actor): void {
+                            $query
+                                ->where('users.uuid', $actor->uuid)
+                                ->where('user_customer_access.is_deleted', false);
+                        })
+                        ->orWhereHas('plans.users', function (Builder $query) use ($actor): void {
+                            $query
+                                ->where('users.uuid', $actor->uuid)
+                                ->where('user_plan_access.is_deleted', false);
+                        });
                 });
             });
     }
@@ -313,7 +321,7 @@ class CustomerSyncService
         return $normalized;
     }
 
-    private function serialize(Customer $customer): array
+    public function serialize(Customer $customer): array
     {
         return [
             'serverId' => $customer->uuid,

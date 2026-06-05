@@ -12,6 +12,9 @@ import '../core/constants/app_enums.dart';
 import '../data/database/db_constants.dart';
 import '../data/database/db_helper.dart';
 import '../data/database/sync_metadata.dart';
+import '../domain/usecases/customer_sync_use_case.dart';
+import '../domain/usecases/installment_plan_sync_use_case.dart';
+import '../domain/usecases/product_sync_use_case.dart';
 import 'product_image_storage.dart';
 import 'session_manager.dart';
 
@@ -19,17 +22,19 @@ class SyncService {
   SyncService({
     required DbHelper dbHelper,
     required SessionManager sessionManager,
+    CustomerSyncUseCase? customerSyncUseCase,
+    ProductSyncUseCase? productSyncUseCase,
+    InstallmentPlanSyncUseCase? installmentPlanSyncUseCase,
     http.Client? httpClient,
   }) : _dbHelper = dbHelper,
        _sessionManager = sessionManager,
+       _customerSyncUseCase = customerSyncUseCase,
+       _productSyncUseCase = productSyncUseCase,
+       _installmentPlanSyncUseCase = installmentPlanSyncUseCase,
        _httpClient = httpClient ?? http.Client();
 
   static const _uploadOrder = <String>[
     DbConstants.users,
-    DbConstants.customers,
-    DbConstants.products,
-    DbConstants.productImages,
-    DbConstants.plans,
     DbConstants.installments,
     DbConstants.payments,
     DbConstants.customerUserAccess,
@@ -38,17 +43,31 @@ class SyncService {
 
   final DbHelper _dbHelper;
   final SessionManager _sessionManager;
+  final CustomerSyncUseCase? _customerSyncUseCase;
+  final ProductSyncUseCase? _productSyncUseCase;
+  final InstallmentPlanSyncUseCase? _installmentPlanSyncUseCase;
   final http.Client _httpClient;
   bool _isRunning = false;
+  bool _isStopping = false;
+
+  void resume() {
+    _isStopping = false;
+  }
 
   Future<bool> syncNow({bool silent = true}) async {
-    if (_isRunning || _sessionManager.apiToken.isEmpty) {
+    if (_isStopping || _isRunning || _sessionManager.apiToken.isEmpty) {
       return false;
     }
 
     _isRunning = true;
     try {
+      await _customerSyncUseCase?.uploadPending();
+      await _productSyncUseCase?.uploadPending();
+      await _installmentPlanSyncUseCase?.uploadPending();
       await _uploadPendingChanges();
+      await _customerSyncUseCase?.downloadLatest();
+      await _productSyncUseCase?.downloadLatest();
+      await _installmentPlanSyncUseCase?.downloadLatest();
       await _downloadServerChanges();
       return true;
     } catch (error, stackTrace) {
@@ -64,6 +83,17 @@ class SyncService {
       return false;
     } finally {
       _isRunning = false;
+    }
+  }
+
+  Future<void> stop({Duration timeout = const Duration(seconds: 30)}) async {
+    _isStopping = true;
+    final startedAt = DateTime.now();
+    while (_isRunning && DateTime.now().difference(startedAt) < timeout) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (!_isRunning) {
+      _isStopping = false;
     }
   }
 

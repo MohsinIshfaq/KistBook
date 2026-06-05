@@ -6,6 +6,7 @@ use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Services\ProductServiceInterface;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductPriceHistory;
 use App\Models\ProductVariant;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
@@ -13,8 +14,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use RuntimeException;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class ProductService implements ProductServiceInterface
 {
@@ -41,17 +42,18 @@ class ProductService implements ProductServiceInterface
 
             /** @var Product $product */
             $product = $this->products->create($data);
+            $this->recordPriceHistory($product, null, (float) $product->sales_price);
             $this->products->syncCategories($product, $categoryUuids);
             $this->storeImages($product, $images);
             $this->syncVariants($product, $variants);
 
-            return $product->load(['categories', 'images', 'variants.attributes']);
+            return $product->load(['categories', 'images', 'variants.attributes', 'priceHistory']);
         });
     }
 
     public function show(string $uuid): Product
     {
-        return $this->products->findByUuidOrFail($uuid, ['categories', 'images', 'variants.attributes', 'plans']);
+        return $this->products->findByUuidOrFail($uuid, ['categories', 'images', 'variants.attributes', 'priceHistory', 'plans']);
     }
 
     public function update(string $uuid, array $data): Product
@@ -72,7 +74,12 @@ class ProductService implements ProductServiceInterface
             );
 
             /** @var Product $updated */
+            $previousPrice = (float) $product->sales_price;
+            $shouldRecordPriceChange = array_key_exists('sales_price', $data);
             $updated = $this->products->update($product, $data);
+            if ($shouldRecordPriceChange && abs($previousPrice - (float) $updated->sales_price) > 0.009) {
+                $this->recordPriceHistory($updated, $previousPrice, (float) $updated->sales_price);
+            }
 
             if (is_array($categoryUuids) || array_key_exists('primary_category_uuid', $data)) {
                 $categoryUuids ??= $updated->categories()->pluck('uuid')->all();
@@ -87,7 +94,7 @@ class ProductService implements ProductServiceInterface
                 $this->syncVariants($updated, $variants);
             }
 
-            return $updated->load(['categories', 'images', 'variants.attributes']);
+            return $updated->load(['categories', 'images', 'variants.attributes', 'priceHistory']);
         });
     }
 
@@ -115,6 +122,7 @@ class ProductService implements ProductServiceInterface
             }
             $duplicate = ProductVariant::query()
                 ->withTrashed()
+                ->where('company_id', $product->company_id)
                 ->where('sku_code', $data['sku_code'])
                 ->when($variant, fn ($query) => $query->where('uuid', '!=', $variant->uuid))
                 ->exists();
@@ -127,6 +135,7 @@ class ProductService implements ProductServiceInterface
                 $variant->restore();
             }
             $variant->fill([
+                'company_id' => $product->company_id,
                 'product_uuid' => $product->uuid,
                 'sku_code' => $data['sku_code'],
                 'sale_price' => $data['sale_price'],
@@ -140,6 +149,7 @@ class ProductService implements ProductServiceInterface
             }
             foreach ($data['attributes'] ?? [] as $attribute) {
                 $variant->attributes()->create([
+                    'company_id' => $product->company_id,
                     'name' => $attribute['name'],
                     'value' => $attribute['value'],
                     'is_deleted' => false,
@@ -280,6 +290,19 @@ class ProductService implements ProductServiceInterface
 
                 $image->forceFill(['sort_order' => $sortOrder])->save();
             });
+    }
+
+    private function recordPriceHistory(Product $product, ?float $previousPrice, float $newPrice): void
+    {
+        ProductPriceHistory::query()->create([
+            'company_id' => $product->company_id,
+            'product_uuid' => $product->uuid,
+            'previous_price' => $previousPrice,
+            'new_price' => $newPrice,
+            'changed_at' => now(),
+            'source' => 'product',
+            'created_by' => auth()->user()?->uuid,
+        ]);
     }
 
     private function generateSku(int $companyId): string

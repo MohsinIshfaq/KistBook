@@ -35,13 +35,13 @@ class CompanyModel {
       id: json.intValue('id'),
       uuid: json.asString('uuid'),
       name: json.stringValue('name'),
-      phone: json.asString('phone'),
+      phone: _firstString(json, ['phone', 'phoneNumber']),
       email: json.asString('email'),
       address: json.asString('address'),
-      ownerId: json.intValue('owner_id'),
+      ownerId: _firstInt(json, ['owner_id', 'ownerId']),
       status: json.asString('status'),
-      createdAt: json.asString('created_at'),
-      updatedAt: json.asString('updated_at'),
+      createdAt: _firstString(json, ['created_at', 'createdAt']),
+      updatedAt: _firstString(json, ['updated_at', 'updatedAt']),
     );
   }
 
@@ -57,4 +57,24 @@ class CompanyModel {
     'created_at': createdAt,
     'updated_at': updatedAt,
   };
+
+  static String? _firstString(DartJson json, List<String> keys) {
+    for (final key in keys) {
+      final value = json.asString(key);
+      if (value != null && value.trim().isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  static int _firstInt(DartJson json, List<String> keys) {
+    for (final key in keys) {
+      final value = json.asInt(key);
+      if (value != null) {
+        return value;
+      }
+    }
+    return 0;
+  }
 }

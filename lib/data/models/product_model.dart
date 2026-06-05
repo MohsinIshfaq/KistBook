@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'base_model.dart';
+import 'product_variant_model.dart';
 
 class ProductModel implements BaseModel {
   static const defaultCategory = 'General';
@@ -28,6 +29,7 @@ class ProductModel implements BaseModel {
     required this.salePrice,
     required this.notes,
     this.imagePaths = const [],
+    this.variants = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -41,6 +43,7 @@ class ProductModel implements BaseModel {
   final double salePrice;
   final String notes;
   final List<String> imagePaths;
+  final List<ProductVariantModel> variants;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -66,6 +69,7 @@ class ProductModel implements BaseModel {
     double? salePrice,
     String? notes,
     List<String>? imagePaths,
+    List<ProductVariantModel>? variants,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => ProductModel(
@@ -77,6 +81,7 @@ class ProductModel implements BaseModel {
     salePrice: salePrice ?? this.salePrice,
     notes: notes ?? this.notes,
     imagePaths: imagePaths ?? this.imagePaths,
+    variants: variants ?? this.variants,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );

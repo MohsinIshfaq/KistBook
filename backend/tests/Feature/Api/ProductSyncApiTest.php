@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductImage;
-use App\Models\ProductVariant;
+use App\Models\ProductPriceHistory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -63,6 +63,9 @@ class ProductSyncApiTest extends TestCase
             ->assertJsonPath('synced.0.salesPrice', 185000)
             ->assertJsonPath('synced.1.productName', 'Smart LED')
             ->assertJsonPath('synced.1.salesPrice', 125000)
+            ->assertJsonCount(1, 'synced.0.priceHistory')
+            ->assertJsonPath('synced.0.priceHistory.0.previousPrice', null)
+            ->assertJsonPath('synced.0.priceHistory.0.newPrice', 185000)
             ->assertJsonPath('synced.0.variants.0.attributes.0.name', 'Capacity')
             ->assertJsonPath('synced.0.isSync', true);
         $this->assertArrayNotHasKey('basePrice', $create->json('synced.0'));
@@ -70,6 +73,11 @@ class ProductSyncApiTest extends TestCase
         $firstServerId = $create->json('mappings.0.serverId');
         $secondServerId = $create->json('mappings.1.serverId');
         $variantServerId = $create->json('synced.0.variants.0.serverId');
+        $this->assertDatabaseHas('product_price_histories', [
+            'product_uuid' => $firstServerId,
+            'previous_price' => null,
+            'new_price' => 185000,
+        ]);
         $originalImage = ProductImage::query()->where('product_uuid', $firstServerId)->firstOrFail();
         Storage::disk('public')->assertExists($originalImage->path);
 
@@ -98,9 +106,13 @@ class ProductSyncApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('synced.0.productName', 'Inverter AC Updated')
             ->assertJsonPath('synced.0.salesPrice', 192000)
+            ->assertJsonCount(2, 'synced.0.priceHistory')
+            ->assertJsonPath('synced.0.priceHistory.0.previousPrice', 185000)
+            ->assertJsonPath('synced.0.priceHistory.0.newPrice', 192000)
             ->assertJsonCount(1, 'synced.0.productImages')
             ->assertJsonCount(1, 'synced.0.variants.0.attributes')
             ->assertJsonPath('synced.0.variants.0.attributes.0.name', 'Series');
+        $this->assertSame(2, ProductPriceHistory::query()->where('product_uuid', $firstServerId)->count());
 
         Storage::disk('public')->assertMissing($originalImage->path);
         $replacementImage = ProductImage::query()->where('product_uuid', $firstServerId)->firstOrFail();

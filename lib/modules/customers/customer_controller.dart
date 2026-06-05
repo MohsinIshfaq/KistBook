@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../data/models/customer_model.dart';
@@ -6,6 +8,7 @@ import '../../data/repositories/customer_repository.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../services/access_control_service.dart';
 import '../../services/background_service.dart';
+import '../../services/sync_change_notifier.dart';
 
 class CustomerController extends GetxController {
   CustomerController({
@@ -25,11 +28,19 @@ class CustomerController extends GetxController {
   CustomerProfile? profile;
   bool isLoading = false;
   String searchQuery = '';
+  StreamSubscription<SyncResource>? _syncSubscription;
 
   @override
   void onInit() {
     super.onInit();
+    _listenForSyncChanges();
     loadCustomers();
+  }
+
+  @override
+  void onClose() {
+    _syncSubscription?.cancel();
+    super.onClose();
   }
 
   Future<void> loadCustomers() async {
@@ -94,5 +105,18 @@ class CustomerController extends GetxController {
     if (Get.isRegistered<BackgroundService>()) {
       Get.find<BackgroundService>().requestSync();
     }
+  }
+
+  void _listenForSyncChanges() {
+    if (!Get.isRegistered<SyncChangeNotifier>()) {
+      return;
+    }
+    _syncSubscription = Get.find<SyncChangeNotifier>().stream.listen((
+      resource,
+    ) {
+      if (resource == SyncResource.customers && !isLoading) {
+        unawaited(loadCustomers());
+      }
+    });
   }
 }

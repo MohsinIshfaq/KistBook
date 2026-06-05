@@ -29,10 +29,18 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
         return $this->model
             ->newQuery()
             ->when($actor->isSalesman(), function (Builder $query) use ($actor): void {
-                $query->whereHas('users', function (Builder $query) use ($actor): void {
+                $query->where(function (Builder $query) use ($actor): void {
                     $query
-                        ->where('users.uuid', $actor->uuid)
-                        ->where('user_customer_access.is_deleted', false);
+                        ->whereHas('users', function (Builder $query) use ($actor): void {
+                            $query
+                                ->where('users.uuid', $actor->uuid)
+                                ->where('user_customer_access.is_deleted', false);
+                        })
+                        ->orWhereHas('plans.users', function (Builder $query) use ($actor): void {
+                            $query
+                                ->where('users.uuid', $actor->uuid)
+                                ->where('user_plan_access.is_deleted', false);
+                        });
                 });
             });
     }

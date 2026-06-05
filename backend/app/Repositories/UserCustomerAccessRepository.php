@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Contracts\Repositories\UserCustomerAccessRepositoryInterface;
 use App\Models\UserCustomerAccess;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class UserCustomerAccessRepository implements UserCustomerAccessRepositoryInterface
@@ -20,5 +21,47 @@ class UserCustomerAccessRepository implements UserCustomerAccessRepositoryInterf
         }
 
         return $assignment;
+    }
+
+    public function replaceForUser(string $userUuid, array $customerUuids): Collection
+    {
+        $customerUuids = array_values(array_unique($customerUuids));
+        $query = UserCustomerAccess::query()
+            ->withTrashed()
+            ->where('user_uuid', $userUuid);
+
+        if ($customerUuids === []) {
+            $query->get()->each(fn (UserCustomerAccess $access) => $this->softDelete($access));
+
+            return collect();
+        }
+
+        (clone $query)
+            ->whereNotIn('customer_uuid', $customerUuids)
+            ->get()
+            ->each(fn (UserCustomerAccess $access) => $this->softDelete($access));
+
+        foreach ($customerUuids as $customerUuid) {
+            $this->assign($userUuid, $customerUuid);
+        }
+
+        return UserCustomerAccess::query()
+            ->where('user_uuid', $userUuid)
+            ->whereIn('customer_uuid', $customerUuids)
+            ->where('is_deleted', false)
+            ->orderBy('created_at')
+            ->get();
+    }
+
+    private function softDelete(UserCustomerAccess $access): void
+    {
+        if ($access->trashed() && $access->is_deleted) {
+            return;
+        }
+
+        $access->forceFill(['is_deleted' => true])->save();
+        if (! $access->trashed()) {
+            $access->delete();
+        }
     }
 }

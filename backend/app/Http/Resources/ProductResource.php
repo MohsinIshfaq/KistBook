@@ -20,6 +20,7 @@ class ProductResource extends JsonResource
             'categories' => ProductCategoryResource::collection($this->whenLoaded('categories')),
             'images' => ProductImageResource::collection($this->whenLoaded('images')),
             'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
+            'priceHistory' => ProductPriceHistoryResource::collection($this->whenLoaded('priceHistory')),
             'primaryImage' => $this->whenLoaded(
                 'images',
                 fn () => $this->images->isEmpty() ? null : new ProductImageResource($this->images->first())

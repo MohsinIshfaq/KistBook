@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Customer;
 use App\Models\Installment;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,6 +107,91 @@ class InstallmentPlanApiTest extends TestCase
             'deleted_at' => null,
             'paid_amount' => 300,
         ]);
+    }
+
+    public function test_sync_create_returns_mapping_and_generated_schedules(): void
+    {
+        [$customer, $product] = $this->records();
+
+        $response = $this->postJson('/api/installment-plans/sync', [
+            'plans' => [[
+                'customerId' => $customer->uuid,
+                'mode' => 'common',
+                'selectedProducts' => [[
+                    'productId' => $product->uuid,
+                    'quantity' => 1,
+                    'agreedPrice' => 1000,
+                ]],
+                'commonDeposit' => 100,
+                'commonInstallmentAmount' => 350,
+                'commonFrequencyInDays' => 30,
+                'commonFirstDueDate' => '2026-06-01',
+                'note' => 'Offline mobile plan',
+            ]],
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('mappings.0.index', 0)
+            ->assertJsonCount(1, 'synced')
+            ->assertJsonCount(3, 'synced.0.schedules')
+            ->assertJsonPath('synced.0.schedules.2.amount', 200);
+    }
+
+    public function test_sync_download_uses_limit_and_cursor_metadata(): void
+    {
+        [$customer, $product] = $this->records();
+        foreach (['2026-06-01 10:00:00', '2026-06-01 10:05:00'] as $updatedAt) {
+            $plan = $this->postJson('/api/installment-plans', [
+                'customerId' => $customer->uuid,
+                'mode' => 'common',
+                'selectedProducts' => [['productId' => $product->uuid]],
+                'commonDeposit' => 100,
+                'commonInstallmentAmount' => 300,
+                'commonFrequencyInDays' => 30,
+                'commonFirstDueDate' => '2026-06-01',
+            ])->assertCreated()->json('data.uuid');
+
+            Plan::query()->where('uuid', $plan)->firstOrFail()->forceFill([
+                'updated_at' => $updatedAt,
+            ])->save();
+        }
+
+        $response = $this->getJson('/api/installment-plans/sync?lastUpdatedAt=2001-01-01T00:00:00.000Z&limit=1');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('limit', 1)
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('hasMore', true)
+            ->assertJsonStructure(['nextCursor' => ['lastUpdatedAt', 'lastServerId'], 'data' => [['serverId', 'selectedProducts', 'schedules']]]);
+    }
+
+    public function test_sync_delete_soft_deletes_plan_and_schedules(): void
+    {
+        [$customer, $product] = $this->records();
+        $planUuid = $this->postJson('/api/installment-plans', [
+            'customerId' => $customer->uuid,
+            'mode' => 'common',
+            'selectedProducts' => [['productId' => $product->uuid]],
+            'commonDeposit' => 100,
+            'commonInstallmentAmount' => 300,
+            'commonFrequencyInDays' => 30,
+            'commonFirstDueDate' => '2026-06-01',
+        ])->assertCreated()->json('data.uuid');
+
+        $this->deleteJson('/api/installment-plans/sync', [
+            'plans' => [[
+                'serverId' => $planUuid,
+            ]],
+        ])
+            ->assertOk()
+            ->assertJsonPath('synced.0.isDeleted', true);
+
+        $this->assertSoftDeleted('plans', ['uuid' => $planUuid]);
+        $this->assertSame(0, Installment::query()->where('plan_uuid', $planUuid)->count());
     }
 
     private function records(): array

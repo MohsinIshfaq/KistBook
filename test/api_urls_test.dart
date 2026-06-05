@@ -8,6 +8,17 @@ void main() {
       expect(API.URL_PROFILE, '${API.baseUrl}/api/auth/profile');
       expect(API.URL_CREATE_COMPANY_USER, '${API.baseUrl}/api/company/users');
       expect(API.URL_CUSTOMERS, '${API.baseUrl}/api/customers');
+      expect(API.URL_CUSTOMER_SYNC, '${API.baseUrl}/api/customers/sync');
+      expect(API.URL_PRODUCT_SYNC, '${API.baseUrl}/api/products/sync');
+      expect(API.URL_BOOTSTRAP, '${API.baseUrl}/api/bootstrap');
+      expect(
+        API.URL_ACCESS_ASSIGNMENTS,
+        '${API.baseUrl}/api/access/assignments',
+      );
+      expect(
+        API.URL_INSTALLMENT_PLAN_SYNC,
+        '${API.baseUrl}/api/installment-plans/sync',
+      );
       expect(
         API.URL_CUSTOMER_DETAIL('customer-uuid'),
         '${API.baseUrl}/api/customers/customer-uuid',

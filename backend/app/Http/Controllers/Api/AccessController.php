@@ -6,6 +6,7 @@ use App\Contracts\Services\AccessServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Access\AssignCustomerAccessRequest;
 use App\Http\Requests\Access\AssignPlanAccessRequest;
+use App\Http\Requests\Access\ReplaceAssignmentsRequest;
 use Illuminate\Http\JsonResponse;
 
 class AccessController extends Controller
@@ -22,5 +23,19 @@ class AccessController extends Controller
     public function assignPlan(AssignPlanAccessRequest $request): JsonResponse
     {
         return $this->successResponse($this->access->assignPlan($request->string('user_uuid')->toString(), $request->string('plan_uuid')->toString()), 'Plan access assigned successfully.', 201);
+    }
+
+    public function replaceAssignments(ReplaceAssignmentsRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        return $this->successResponse(
+            $this->access->replaceAssignments(
+                $validated['user_uuid'],
+                $validated['customer_uuids'],
+                $validated['plan_uuids'],
+            ),
+            'Assignments saved successfully.',
+        );
     }
 }

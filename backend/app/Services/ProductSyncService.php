@@ -30,7 +30,7 @@ class ProductSyncService
         $limit = max(1, min(10, $limit));
         $query = Product::query()
             ->where('is_deleted', false)
-            ->with(['categories', 'images', 'variants.attributes']);
+            ->with(['categories', 'images', 'variants.attributes', 'priceHistory']);
         if ($lastUpdatedAt !== null) {
             $timestamp = Carbon::parse($lastUpdatedAt);
             $query->where(function (Builder $query) use ($timestamp, $lastServerId): void {
@@ -146,7 +146,7 @@ class ProductSyncService
                     'reason' => 'The server product is newer than the uploaded record.',
                     'serverRecord' => $product->is_deleted || $product->trashed()
                         ? $this->deletionAcknowledgement($product)
-                        : $this->serialize($product->load(['categories', 'images', 'variants.attributes'])),
+                        : $this->serialize($product->load(['categories', 'images', 'variants.attributes', 'priceHistory'])),
                 ],
             ];
         }
@@ -174,7 +174,7 @@ class ProductSyncService
 
         return [
             'serverId' => $product->uuid,
-            'product' => $this->serialize($product->load(['categories', 'images', 'variants.attributes'])),
+            'product' => $this->serialize($product->load(['categories', 'images', 'variants.attributes', 'priceHistory'])),
         ];
     }
 
@@ -302,7 +302,7 @@ class ProductSyncService
         return $code;
     }
 
-    private function serialize(Product $product): array
+    public function serialize(Product $product): array
     {
         return [
             'serverId' => $product->uuid,
@@ -329,6 +329,13 @@ class ProductSyncService
                     'name' => $attribute->name,
                     'value' => $attribute->value,
                 ])->values()->all(),
+            ])->values()->all(),
+            'priceHistory' => $product->priceHistory->map(fn ($history): array => [
+                'serverId' => $history->uuid,
+                'previousPrice' => $history->previous_price === null ? null : (float) $history->previous_price,
+                'newPrice' => (float) $history->new_price,
+                'changedAt' => $history->changed_at?->toJSON(),
+                'source' => $history->source,
             ])->values()->all(),
             'isSync' => true,
             'syncStatus' => 'synced',

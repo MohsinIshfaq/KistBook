@@ -186,12 +186,12 @@ class SessionManager {
     userId = json.intValue('id');
     userUuid = json.asString('uuid') ?? json.asString('id') ?? '';
     if (companyId == 0) {
-      companyId = json.intValue('company_id');
+      companyId = json.asInt('company_id') ?? json.intValue('companyId');
     }
-    phone = json.stringValue('phone');
+    phone = json.asString('phone') ?? json.stringValue('phoneNumber');
     email = json.stringValue('email');
-    firstName = json.stringValue('first_name');
-    lastName = json.stringValue('last_name');
+    firstName = json.asString('first_name') ?? json.stringValue('firstName');
+    lastName = json.asString('last_name') ?? json.stringValue('lastName');
     fullName = json.stringValue('name').trim();
     if (fullName.isEmpty) {
       fullName = '$firstName $lastName'.trim();
@@ -221,6 +221,7 @@ class SessionManager {
     await _secureStorage.delete(key: _companyDataKey);
     await _preferences.remove(_userDataKey);
     await _preferences.remove(_apiTokenKey);
+    await _preferences.remove(_lastSyncDateKey);
     await _preferences.setBool(_isLoggedInKey, false);
     userData = {};
     loginResponseData = {};

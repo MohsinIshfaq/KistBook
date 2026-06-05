@@ -142,6 +142,9 @@ class SyncService
 
             return $model;
         }
+        if ($tableName === 'user_plan_access') {
+            $this->validatePlanAccessAssignment($row, $model);
+        }
 
         $data = $this->normalizeUploadData($tableName, $row, $actor, $model);
         if ($model === null) {
@@ -158,6 +161,28 @@ class SyncService
         }
 
         return $model->refresh();
+    }
+
+    private function validatePlanAccessAssignment(array $row, ?Model $model): void
+    {
+        $userUuid = $row['user_uuid'] ?? null;
+        $planUuid = $row['plan_uuid'] ?? null;
+        if (! is_string($userUuid) || $userUuid === '' || ! is_string($planUuid) || $planUuid === '') {
+            return;
+        }
+
+        $query = UserPlanAccess::query()
+            ->where('plan_uuid', $planUuid)
+            ->where('user_uuid', '!=', $userUuid)
+            ->where('is_deleted', false);
+
+        if ($model instanceof UserPlanAccess && $model->uuid !== null) {
+            $query->where('uuid', '!=', $model->uuid);
+        }
+
+        if ($query->exists()) {
+            throw new \RuntimeException('This plan is already assigned to another salesman. Remove it from that user first.');
+        }
     }
 
     private function findExistingModel(string $tableName, array $row): ?Model

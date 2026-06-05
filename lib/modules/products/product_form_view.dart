@@ -10,6 +10,8 @@ import '../../core/utils/text_helper.dart';
 import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/product_model.dart';
+import '../../data/models/product_variant_attribute_model.dart';
+import '../../data/models/product_variant_model.dart';
 import '../../services/product_image_storage.dart';
 import 'product_controller.dart';
 import 'product_image_preview_view.dart';
@@ -33,6 +35,7 @@ class _ProductFormViewState extends State<ProductFormView> {
   final ImagePicker imagePicker = ImagePicker();
   final List<String> selectedCategories = [];
   final List<String> productImagePaths = [];
+  final List<_VariantDraft> variantDrafts = [];
   final Set<String> sessionAddedImagePaths = {};
   ProductModel? existing;
   bool didSave = false;
@@ -54,6 +57,9 @@ class _ProductFormViewState extends State<ProductFormView> {
       productImagePaths
         ..clear()
         ..addAll(arg.imagePaths);
+      variantDrafts
+        ..clear()
+        ..addAll(arg.variants.map(_VariantDraft.fromModel));
     }
   }
 
@@ -232,6 +238,31 @@ class _ProductFormViewState extends State<ProductFormView> {
     );
   }
 
+  Future<void> _addVariant() async {
+    final draft = await _openVariantEditor();
+    if (draft == null || !mounted) {
+      return;
+    }
+    setState(() => variantDrafts.add(draft));
+  }
+
+  Future<void> _editVariant(int index) async {
+    final draft = await _openVariantEditor(variantDrafts[index]);
+    if (draft == null || !mounted) {
+      return;
+    }
+    setState(() => variantDrafts[index] = draft);
+  }
+
+  Future<_VariantDraft?> _openVariantEditor([_VariantDraft? initial]) {
+    return showModalBottomSheet<_VariantDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _VariantEditorSheet(initial: initial),
+    );
+  }
+
   @override
   void dispose() {
     if (!didSave) {
@@ -364,6 +395,12 @@ class _ProductFormViewState extends State<ProductFormView> {
             prefixIcon: Icons.payments_outlined,
             keyboardType: TextInputType.number,
           ),
+          _ProductVariantSection(
+            variants: variantDrafts,
+            onAdd: _addVariant,
+            onEdit: _editVariant,
+            onRemove: (index) => setState(() => variantDrafts.removeAt(index)),
+          ),
           AppTextField(
             label: 'Notes'.tr,
             hint: 'Optional product notes'.tr,
@@ -383,12 +420,6 @@ class _ProductFormViewState extends State<ProductFormView> {
               final notes = notesController.text.trim();
               final errors = <String>[];
 
-              if (brandName.isEmpty) {
-                errors.add('Brand name is required.'.tr);
-              }
-              if (selectedCategories.isEmpty) {
-                errors.add('At least one category is required.'.tr);
-              }
               if (selectedCategories.any((item) => item.trim().length < 2)) {
                 errors.add('Each category should be at least 2 characters.'.tr);
               }
@@ -401,7 +432,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               if (productName.length < 2) {
                 errors.add('Product name should be at least 2 characters.'.tr);
               }
-              if (brandName.length < 2) {
+              if (brandName.isNotEmpty && brandName.length < 2) {
                 errors.add('Brand name should be at least 2 characters.'.tr);
               }
               if (sku.isNotEmpty && sku.length < 3) {
@@ -413,6 +444,35 @@ class _ProductFormViewState extends State<ProductFormView> {
                 errors.add(
                   'Price looks too high. Please recheck the amount.'.tr,
                 );
+              }
+              final variantSkus = <String>{};
+              for (final variant in variantDrafts) {
+                if (variant.sku.trim().isEmpty) {
+                  errors.add('Variant SKU is required.'.tr);
+                  break;
+                }
+                if (variant.salePrice <= 0) {
+                  errors.add(
+                    'Variant sale price must be greater than zero.'.tr,
+                  );
+                  break;
+                }
+                final normalizedSku = variant.sku.trim().toLowerCase();
+                if (!variantSkus.add(normalizedSku)) {
+                  errors.add('Variant SKU must be unique.'.tr);
+                  break;
+                }
+                final hasIncompleteAttribute = variant.attributes.any(
+                  (attribute) =>
+                      attribute.name.trim().isEmpty ||
+                      attribute.value.trim().isEmpty,
+                );
+                if (hasIncompleteAttribute) {
+                  errors.add(
+                    'Variant attributes require both name and value.'.tr,
+                  );
+                  break;
+                }
               }
               if (notes.length > 250) {
                 errors.add('Notes should be 250 characters or less.'.tr);
@@ -438,6 +498,9 @@ class _ProductFormViewState extends State<ProductFormView> {
                   salePrice: salePrice,
                   notes: notes,
                   imagePaths: List<String>.from(productImagePaths),
+                  variants: variantDrafts
+                      .map((draft) => draft.toModel())
+                      .toList(),
                   createdAt: existing?.createdAt ?? DateTime.now(),
                   updatedAt: existing?.updatedAt ?? DateTime.now(),
                 ),
@@ -454,6 +517,417 @@ class _ProductFormViewState extends State<ProductFormView> {
 }
 
 enum _ProductImageSource { gallery, camera }
+
+class _VariantDraft {
+  const _VariantDraft({
+    this.id,
+    this.serverId,
+    required this.sku,
+    required this.salePrice,
+    required this.attributes,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final int? id;
+  final String? serverId;
+  final String sku;
+  final double salePrice;
+  final List<_VariantAttributeDraft> attributes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory _VariantDraft.fromModel(ProductVariantModel model) {
+    return _VariantDraft(
+      id: model.id,
+      serverId: model.serverId,
+      sku: model.sku,
+      salePrice: model.salePrice,
+      attributes: model.attributes
+          .map(
+            (attribute) => _VariantAttributeDraft(
+              name: attribute.name,
+              value: attribute.value,
+            ),
+          )
+          .toList(),
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
+    );
+  }
+
+  ProductVariantModel toModel() {
+    return ProductVariantModel(
+      id: id,
+      serverId: serverId,
+      sku: sku.trim(),
+      salePrice: salePrice,
+      attributes: attributes
+          .map(
+            (attribute) => ProductVariantAttributeModel(
+              name: attribute.name.trim(),
+              value: attribute.value.trim(),
+            ),
+          )
+          .where(
+            (attribute) =>
+                attribute.name.isNotEmpty && attribute.value.isNotEmpty,
+          )
+          .toList(),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+}
+
+class _VariantAttributeDraft {
+  const _VariantAttributeDraft({required this.name, required this.value});
+
+  final String name;
+  final String value;
+}
+
+class _ProductVariantSection extends StatelessWidget {
+  const _ProductVariantSection({
+    required this.variants,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final List<_VariantDraft> variants;
+  final VoidCallback onAdd;
+  final ValueChanged<int> onEdit;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryText = isDark ? Colors.white : AppColors.inkStrong;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Product Variants'.tr,
+                  style: TextStyle(
+                    color: primaryText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_rounded),
+                label: Text('Add Variant'.tr),
+              ),
+            ],
+          ),
+          if (variants.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Add variants for color, size, storage, capacity, or any future attribute.'
+                  .tr,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isDark ? Colors.white70 : AppColors.inkSoft,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            ...List.generate(variants.length, (index) {
+              final variant = variants[index];
+              return Card(
+                margin: EdgeInsets.only(
+                  bottom: index == variants.length - 1 ? 0 : 10,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              variant.sku,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => onEdit(index),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          IconButton(
+                            onPressed: () => onRemove(index),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Sale price: @price'.trParams({
+                          'price': variant.salePrice.toStringAsFixed(0),
+                        }),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (variant.attributes.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: variant.attributes
+                              .map(
+                                (attribute) => Chip(
+                                  label: Text(
+                                    '${attribute.name}: ${attribute.value}',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VariantEditorSheet extends StatefulWidget {
+  const _VariantEditorSheet({this.initial});
+
+  final _VariantDraft? initial;
+
+  @override
+  State<_VariantEditorSheet> createState() => _VariantEditorSheetState();
+}
+
+class _VariantEditorSheetState extends State<_VariantEditorSheet> {
+  late final TextEditingController skuController;
+  late final TextEditingController priceController;
+  final List<_AttributeControllerGroup> attributeControllers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    skuController = TextEditingController(text: initial?.sku ?? '');
+    priceController = TextEditingController(
+      text: initial == null ? '' : initial.salePrice.toStringAsFixed(0),
+    );
+    attributeControllers.addAll(
+      (initial?.attributes ?? const <_VariantAttributeDraft>[])
+          .map(
+            (attribute) => _AttributeControllerGroup(
+              name: attribute.name,
+              value: attribute.value,
+            ),
+          )
+          .toList(),
+    );
+    if (attributeControllers.isEmpty) {
+      attributeControllers.add(_AttributeControllerGroup());
+    }
+  }
+
+  @override
+  void dispose() {
+    skuController.dispose();
+    priceController.dispose();
+    for (final group in attributeControllers) {
+      group.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addAttribute() {
+    setState(() => attributeControllers.add(_AttributeControllerGroup()));
+  }
+
+  void _removeAttribute(int index) {
+    final removed = attributeControllers.removeAt(index);
+    removed.dispose();
+    if (attributeControllers.isEmpty) {
+      attributeControllers.add(_AttributeControllerGroup());
+    }
+    setState(() {});
+  }
+
+  void _save() {
+    final sku = skuController.text.trim();
+    final salePrice = double.tryParse(priceController.text.trim()) ?? 0;
+    final errors = <String>[];
+    if (sku.isEmpty) {
+      errors.add('Variant SKU is required.'.tr);
+    }
+    if (salePrice <= 0) {
+      errors.add('Variant sale price must be greater than zero.'.tr);
+    }
+
+    final attributes = <_VariantAttributeDraft>[];
+    for (final group in attributeControllers) {
+      final name = TextHelper.toTitleCase(group.nameController.text);
+      final value = group.valueController.text.trim();
+      if (name.isEmpty && value.isEmpty) {
+        continue;
+      }
+      if (name.isEmpty || value.isEmpty) {
+        errors.add('Variant attributes require both name and value.'.tr);
+        break;
+      }
+      attributes.add(_VariantAttributeDraft(name: name, value: value));
+    }
+
+    if (errors.isNotEmpty) {
+      showBannerAlert(
+        type: BannerStyle.error,
+        title: 'Validation Errors'.tr,
+        messages: errors,
+        duration: 4,
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    Navigator.of(context).pop(
+      _VariantDraft(
+        id: widget.initial?.id,
+        serverId: widget.initial?.serverId,
+        sku: sku,
+        salePrice: salePrice,
+        attributes: attributes,
+        createdAt: widget.initial?.createdAt ?? now,
+        updatedAt: now,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                (widget.initial == null ? 'Add Variant' : 'Edit Variant').tr,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Variant SKU'.tr,
+                hint: 'OPPO-R13-BLK-256',
+                controller: skuController,
+                prefixIcon: Icons.qr_code_2_outlined,
+              ),
+              AppTextField(
+                label: 'Variant sale price'.tr,
+                hint: '145000',
+                controller: priceController,
+                prefixIcon: Icons.payments_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Dynamic Attributes'.tr,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addAttribute,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text('Add'.tr),
+                  ),
+                ],
+              ),
+              ...List.generate(attributeControllers.length, (index) {
+                final group = attributeControllers[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          label: 'Name'.tr,
+                          hint: 'Color'.tr,
+                          controller: group.nameController,
+                          prefixIcon: Icons.label_outline,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AppTextField(
+                          label: 'Value'.tr,
+                          hint: 'Black'.tr,
+                          controller: group.valueController,
+                          prefixIcon: Icons.text_fields_rounded,
+                        ),
+                      ),
+                      IconButton(
+                        padding: const EdgeInsets.only(top: 22),
+                        onPressed: () => _removeAttribute(index),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _save,
+                  child: Text('Save Variant'.tr),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AttributeControllerGroup {
+  _AttributeControllerGroup({String name = '', String value = ''})
+    : nameController = TextEditingController(text: name),
+      valueController = TextEditingController(text: value);
+
+  final TextEditingController nameController;
+  final TextEditingController valueController;
+
+  void dispose() {
+    nameController.dispose();
+    valueController.dispose();
+  }
+}
 
 class _ProductImageSection extends StatelessWidget {
   const _ProductImageSection({

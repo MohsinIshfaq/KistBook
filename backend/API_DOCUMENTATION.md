@@ -128,7 +128,7 @@ Example generic variants:
 }
 ```
 
-Product SKU is optional; when supplied it must be unique within the company. Variant SKUs are unique within each company. Sending `variants` during update replaces the active variant set; omitted variants are soft deleted.
+Product SKU is optional; when supplied it must be unique within the company. Variant SKUs are unique within each company. Sending `variants` during update replaces the active variant set; omitted variants are soft deleted. Product create/update records backend price history. Product detail and sync download responses include `priceHistory` entries with `previousPrice`, `newPrice`, and `changedAt`.
 
 Optional product images use:
 
@@ -155,6 +155,10 @@ When `productImages` is included in a `PUT` row, it replaces the active image se
 | `GET` | `/installment-plans/{uuid}` | Plan detail with items and schedules |
 | `PUT` | `/installment-plans/{uuid}` | Replace plan configuration |
 | `DELETE` | `/installment-plans/{uuid}` | Soft delete plan, items, and schedules |
+| `GET` | `/installment-plans/sync?lastUpdatedAt=...&limit=10` | Download changed active plans with schedules |
+| `POST` | `/installment-plans/sync` | Upload locally-created plans |
+| `PUT` | `/installment-plans/sync` | Upload locally-edited plans |
+| `DELETE` | `/installment-plans/sync` | Upload local plan deletes |
 
 Common plan body:
 
@@ -174,6 +178,29 @@ Common plan body:
 ```
 
 Separate mode moves `deposit`, `installmentAmount`, `frequencyInDays`, and `firstDueDate` into each selected product. `agreedPrice` is optional; otherwise the variant sale price or product base price is used. The final installment is reduced to the exact remaining balance. Paid schedules remain immutable during plan edits; future unpaid rows are rebuilt.
+
+Sync upload body:
+
+```json
+{
+  "plans": [
+    {
+      "customerId": "CUSTOMER_UUID",
+      "mode": "common",
+      "selectedProducts": [
+        { "productId": "PRODUCT_UUID", "quantity": 1, "agreedPrice": 10000 }
+      ],
+      "commonDeposit": 1000,
+      "commonInstallmentAmount": 3000,
+      "commonFrequencyInDays": 30,
+      "commonFirstDueDate": "2026-06-01",
+      "note": "Offline plan"
+    }
+  ]
+}
+```
+
+`PUT` and `DELETE` sync rows send `serverId`. The server processes each row independently and returns `mappings`, `synced`, `failed`, and `conflicts`. Download uses the same cursor pattern as customer/product sync: keep calling with `nextCursor.lastUpdatedAt` and `nextCursor.lastServerId` until `data` is empty.
 
 ## Legacy Endpoints
 

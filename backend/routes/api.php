@@ -9,10 +9,12 @@ use App\Http\Controllers\Api\CustomerSyncController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\InstallmentPlanController;
+use App\Http\Controllers\Api\InstallmentPlanSyncController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductSyncController;
+use App\Http\Controllers\Api\RuntimeBootstrapController;
 use App\Http\Controllers\Api\SyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
     Route::get('me', [AuthController::class, 'me']);
     Route::post('company/users', [CompanyUserController::class, 'store']);
+    Route::get('bootstrap', [RuntimeBootstrapController::class, 'show']);
 
     Route::get('customers/sync', [CustomerSyncController::class, 'download']);
     Route::post('customers/sync', [CustomerSyncController::class, 'create']);
@@ -38,6 +41,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::put('products/sync', [ProductSyncController::class, 'update']);
     Route::delete('products/sync', [ProductSyncController::class, 'delete']);
     Route::get('products/{uuid}', [ProductController::class, 'show']);
+    Route::get('installment-plans/sync', [InstallmentPlanSyncController::class, 'download']);
+    Route::post('installment-plans/sync', [InstallmentPlanSyncController::class, 'create']);
+    Route::put('installment-plans/sync', [InstallmentPlanSyncController::class, 'update']);
+    Route::delete('installment-plans/sync', [InstallmentPlanSyncController::class, 'delete']);
+    Route::get('plans/sync', [InstallmentPlanSyncController::class, 'download']);
+    Route::post('plans/sync', [InstallmentPlanSyncController::class, 'create']);
+    Route::put('plans/sync', [InstallmentPlanSyncController::class, 'update']);
+    Route::delete('plans/sync', [InstallmentPlanSyncController::class, 'delete']);
     Route::apiResource('categories', CategoryController::class)->parameter('categories', 'uuid');
     Route::apiResource('installment-plans', InstallmentPlanController::class)->parameter('installment-plans', 'uuid');
     Route::apiResource('plans', PlanController::class)->parameter('plans', 'uuid');
@@ -46,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::post('access/customer', [AccessController::class, 'assignCustomer']);
     Route::post('access/plan', [AccessController::class, 'assignPlan']);
+    Route::put('access/assignments', [AccessController::class, 'replaceAssignments']);
 
     Route::post('sync/upload', [SyncController::class, 'upload']);
     Route::get('sync/download', [SyncController::class, 'download']);

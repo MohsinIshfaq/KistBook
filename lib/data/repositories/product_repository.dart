@@ -7,6 +7,8 @@ import '../database/sync_metadata.dart';
 import '../models/product_image_model.dart';
 import '../models/product_model.dart';
 import '../models/product_price_history_model.dart';
+import '../models/product_variant_attribute_model.dart';
+import '../models/product_variant_model.dart';
 import 'generic_repository.dart';
 
 class ProductRepository extends GenericRepository<ProductModel> {
@@ -19,7 +21,7 @@ class ProductRepository extends GenericRepository<ProductModel> {
 
   Future<List<ProductModel>> fetchProducts() async {
     final products = await getAll(orderBy: 'updated_at DESC');
-    return _attachImages(products);
+    return _attachProductRelations(products);
   }
 
   Future<ProductModel> saveProduct(ProductModel product) async {
@@ -44,6 +46,9 @@ class ProductRepository extends GenericRepository<ProductModel> {
 
       final now = DateTime.now();
       final imagePaths = _normalizedImagePaths(product.imagePaths);
+      final imagesChanged =
+          product.id == null ||
+          !_sameStringList(imagePaths, existingImagePaths);
       final productToSave = ProductModel(
         id: product.id,
         categories: product.categories,
@@ -100,12 +105,17 @@ class ProductRepository extends GenericRepository<ProductModel> {
         }
       }
 
-      await _replaceImages(txn, productId, imagePaths, now);
+      if (imagesChanged) {
+        await _replaceImages(txn, productId, imagePaths, now);
+      }
+      await _replaceVariants(txn, productId, product.variants, now);
 
-      final removedImagePaths = existingImagePaths
-          .where((path) => !imagePaths.contains(path))
-          .toSet()
-          .toList();
+      final removedImagePaths = imagesChanged
+          ? existingImagePaths
+                .where((path) => !imagePaths.contains(path))
+                .toSet()
+                .toList()
+          : <String>[];
 
       return _ProductSaveResult(
         product: ProductModel(
@@ -117,6 +127,9 @@ class ProductRepository extends GenericRepository<ProductModel> {
           salePrice: productToSave.salePrice,
           notes: productToSave.notes,
           imagePaths: productToSave.imagePaths,
+          variants: product.variants
+              .map((variant) => variant.copyWith(productId: productId))
+              .toList(),
           createdAt: productToSave.createdAt,
           updatedAt: productToSave.updatedAt,
         ),
@@ -132,6 +145,22 @@ class ProductRepository extends GenericRepository<ProductModel> {
     final database = await db;
     final imagePaths = await database.transaction<List<String>>((txn) async {
       final paths = await _fetchImagePaths(txn, productId);
+      final variantIds = await _fetchVariantIds(txn, productId);
+      if (variantIds.isNotEmpty) {
+        final placeholders = List.filled(variantIds.length, '?').join(',');
+        await txn.update(
+          DbConstants.productVariantAttributes,
+          {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+          where: 'variant_id IN ($placeholders)',
+          whereArgs: variantIds,
+        );
+      }
+      await txn.update(
+        DbConstants.productVariants,
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'product_id = ?',
+        whereArgs: [productId],
+      );
       await txn.update(
         DbConstants.productImages,
         SyncMetadata.withLocalChange(DbConstants.productImages, {
@@ -163,7 +192,10 @@ class ProductRepository extends GenericRepository<ProductModel> {
       return null;
     }
     final imagePaths = await _fetchImagePaths(database, productId);
-    return ProductModel.fromMap(rows.first).copyWith(imagePaths: imagePaths);
+    final variants = await _fetchVariants(database, productId);
+    return ProductModel.fromMap(
+      rows.first,
+    ).copyWith(imagePaths: imagePaths, variants: variants);
   }
 
   Future<List<ProductPriceHistoryModel>> fetchPriceHistory(
@@ -179,7 +211,9 @@ class ProductRepository extends GenericRepository<ProductModel> {
     return rows.map(ProductPriceHistoryModel.fromMap).toList();
   }
 
-  Future<List<ProductModel>> _attachImages(List<ProductModel> products) async {
+  Future<List<ProductModel>> _attachProductRelations(
+    List<ProductModel> products,
+  ) async {
     final productIds = products
         .map((product) => product.id)
         .whereType<int>()
@@ -193,12 +227,17 @@ class ProductRepository extends GenericRepository<ProductModel> {
       database,
       productIds,
     );
+    final variantsByProductId = await _fetchVariantsByProductId(
+      database,
+      productIds,
+    );
     return products
         .map(
           (product) => product.id == null
               ? product
               : product.copyWith(
                   imagePaths: imagePathsByProductId[product.id] ?? const [],
+                  variants: variantsByProductId[product.id] ?? const [],
                 ),
         )
         .toList();
@@ -281,6 +320,161 @@ class ProductRepository extends GenericRepository<ProductModel> {
     }
   }
 
+  Future<void> _replaceVariants(
+    Transaction txn,
+    int productId,
+    List<ProductVariantModel> variants,
+    DateTime updatedAt,
+  ) async {
+    final existingVariantIds = await _fetchVariantIds(txn, productId);
+    if (existingVariantIds.isNotEmpty) {
+      final placeholders = List.filled(
+        existingVariantIds.length,
+        '?',
+      ).join(',');
+      await txn.update(
+        DbConstants.productVariantAttributes,
+        {'is_deleted': 1, 'updated_at': updatedAt.toIso8601String()},
+        where: 'variant_id IN ($placeholders)',
+        whereArgs: existingVariantIds,
+      );
+    }
+    await txn.update(
+      DbConstants.productVariants,
+      {'is_deleted': 1, 'updated_at': updatedAt.toIso8601String()},
+      where: 'product_id = ?',
+      whereArgs: [productId],
+    );
+
+    for (final variant in variants) {
+      final values =
+          variant
+              .copyWith(
+                productId: productId,
+                createdAt: variant.createdAt.millisecondsSinceEpoch == 0
+                    ? updatedAt
+                    : variant.createdAt,
+                updatedAt: updatedAt,
+                isDeleted: false,
+              )
+              .toMap()
+            ..remove('id');
+
+      int variantId;
+      if (variant.id != null &&
+          existingVariantIds.contains(variant.id) &&
+          await _variantBelongsToProduct(txn, variant.id!, productId)) {
+        variantId = variant.id!;
+        await txn.update(
+          DbConstants.productVariants,
+          values,
+          where: 'id = ?',
+          whereArgs: [variantId],
+        );
+      } else {
+        variantId = await txn.insert(DbConstants.productVariants, values);
+      }
+
+      await txn.update(
+        DbConstants.productVariantAttributes,
+        {'is_deleted': 1, 'updated_at': updatedAt.toIso8601String()},
+        where: 'variant_id = ?',
+        whereArgs: [variantId],
+      );
+
+      for (final attribute in variant.attributes) {
+        final name = attribute.name.trim();
+        final value = attribute.value.trim();
+        if (name.isEmpty || value.isEmpty) {
+          continue;
+        }
+        await txn.insert(
+          DbConstants.productVariantAttributes,
+          ProductVariantAttributeModel(
+            variantId: variantId,
+            name: name,
+            value: value,
+            createdAt: updatedAt,
+            updatedAt: updatedAt,
+          ).toMap()..remove('id'),
+        );
+      }
+    }
+  }
+
+  Future<List<int>> _fetchVariantIds(
+    DatabaseExecutor executor,
+    int productId,
+  ) async {
+    final rows = await executor.query(
+      DbConstants.productVariants,
+      columns: ['id'],
+      where: 'product_id = ?',
+      whereArgs: [productId],
+    );
+    return rows.map((row) => row['id'] as int).toList();
+  }
+
+  Future<bool> _variantBelongsToProduct(
+    DatabaseExecutor executor,
+    int variantId,
+    int productId,
+  ) async {
+    final rows = await executor.query(
+      DbConstants.productVariants,
+      columns: ['id'],
+      where: 'id = ? AND product_id = ?',
+      whereArgs: [variantId, productId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<List<ProductVariantModel>> _fetchVariants(
+    DatabaseExecutor executor,
+    int productId,
+  ) async {
+    final rows = await executor.query(
+      DbConstants.productVariants,
+      where: 'product_id = ? AND is_deleted = 0',
+      whereArgs: [productId],
+      orderBy: 'id ASC',
+    );
+    final variants = <ProductVariantModel>[];
+    for (final row in rows) {
+      final variantId = row['id'] as int?;
+      final attributes = variantId == null
+          ? const <ProductVariantAttributeModel>[]
+          : await _fetchVariantAttributes(executor, variantId);
+      variants.add(ProductVariantModel.fromMap(row, attributes: attributes));
+    }
+    return variants;
+  }
+
+  Future<Map<int, List<ProductVariantModel>>> _fetchVariantsByProductId(
+    DatabaseExecutor executor,
+    List<int> productIds,
+  ) async {
+    final result = <int, List<ProductVariantModel>>{};
+    for (final productId in productIds) {
+      result[productId] = await _fetchVariants(executor, productId);
+    }
+    return result;
+  }
+
+  Future<List<ProductVariantAttributeModel>> _fetchVariantAttributes(
+    DatabaseExecutor executor,
+    int variantId,
+  ) async {
+    final rows = await executor.query(
+      DbConstants.productVariantAttributes,
+      where: 'variant_id = ? AND is_deleted = 0',
+      whereArgs: [variantId],
+      orderBy: 'id ASC',
+    );
+    return rows.map(ProductVariantAttributeModel.fromMap).toList();
+  }
+
   List<String> _normalizedImagePaths(List<String> imagePaths) {
     final seen = <String>{};
     final values = <String>[];
@@ -293,6 +487,18 @@ class ProductRepository extends GenericRepository<ProductModel> {
       values.add(normalized);
     }
     return values;
+  }
+
+  bool _sameStringList(List<String> left, List<String> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var index = 0; index < left.length; index += 1) {
+      if (left[index] != right[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> _deleteImageFiles(List<String> imagePaths) async {

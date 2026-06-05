@@ -86,6 +86,50 @@ void main() {
       expect(response.user?.fullName, 'Top Level User');
     });
 
+    test('maps current backend camelCase login response', () {
+      final response = LoginResponseModel.fromJson({
+        'success': true,
+        'message': 'Login successful.',
+        'token': '24|token',
+        'user': {
+          'id': 4,
+          'uuid': 'f96a8b4d-b21d-45b4-ac9d-113174c4d16b',
+          'companyId': 1,
+          'name': 'Mauz Ansari',
+          'phoneNumber': '03012345678',
+          'email': 'mauz@example.com',
+          'firstName': 'Mauz',
+          'lastName': 'Ansari',
+          'role': 'owner',
+          'status': 'active',
+          'isActive': true,
+          'createdAt': '2026-06-01T07:18:55.000000Z',
+          'updatedAt': '2026-06-01T07:18:55.000000Z',
+        },
+        'company': {
+          'id': 1,
+          'uuid': '60396527-26bc-473d-b41c-7ce78d22a507',
+          'name': 'Mauz Electronics',
+          'phoneNumber': '03001234567',
+          'email': 'mauz@example.com',
+          'address': 'Multan',
+          'ownerId': 4,
+          'status': 'active',
+          'createdAt': '2026-06-01T07:18:55.000000Z',
+          'updatedAt': '2026-06-01T07:18:55.000000Z',
+        },
+      });
+
+      expect(response.isValid, isTrue);
+      expect(response.token, '24|token');
+      expect(response.user?.companyId, 1);
+      expect(response.user?.phone, '03012345678');
+      expect(response.user?.firstName, 'Mauz');
+      expect(response.user?.role, UserRole.owner);
+      expect(response.company?.phone, '03001234567');
+      expect(response.company?.ownerId, 4);
+    });
+
     test('returns invalid model for incomplete payload', () {
       final response = LoginResponseModel.fromJson({
         'Message': 'Incomplete response',
