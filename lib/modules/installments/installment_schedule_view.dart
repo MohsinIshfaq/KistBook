@@ -18,11 +18,15 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBackground = isDark ? AppColors.brandSecondary : AppColors.surface;
+    final cardBackground = isDark
+        ? AppColors.brandSecondary
+        : AppColors.surface;
     final primaryText = isDark ? Colors.white : AppColors.inkStrong;
     final secondaryText = isDark ? const Color(0xFFD0D5DD) : AppColors.inkSoft;
     final mutedText = isDark ? const Color(0xFF98A2B3) : AppColors.inkMuted;
-    final dividerColor = isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.border;
+    final dividerColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : AppColors.border;
 
     return AppShell(
       title: 'Installments'.tr,
@@ -41,23 +45,25 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
           for (final item in logic.installments) {
             grouped.putIfAbsent(item.plan.id ?? 0, () => []).add(item);
           }
-          final summaries = grouped.values.map((items) {
-            items.sort(
-              (a, b) => a.installment.currentDueDate.compareTo(b.installment.currentDueDate),
-            );
-            final first = items.first;
-            return InstallmentPlanSummary(
-              customer: first.customer,
-              plan: first.plan,
-              product: first.product,
-              installments: items.map((item) => item.installment).toList(),
-            );
-          }).toList()
-            ..sort((a, b) {
-              final firstDate = a.nextDueDate ?? DateTime(2100);
-              final secondDate = b.nextDueDate ?? DateTime(2100);
-              return firstDate.compareTo(secondDate);
-            });
+          final summaries =
+              grouped.values.map((items) {
+                items.sort(
+                  (a, b) => a.installment.currentDueDate.compareTo(
+                    b.installment.currentDueDate,
+                  ),
+                );
+                final first = items.first;
+                return InstallmentPlanSummary(
+                  customer: first.customer,
+                  plan: first.plan,
+                  product: first.product,
+                  installments: items.map((item) => item.installment).toList(),
+                );
+              }).toList()..sort((a, b) {
+                final firstDate = a.nextDueDate ?? DateTime(2100);
+                final secondDate = b.nextDueDate ?? DateTime(2100);
+                return firstDate.compareTo(secondDate);
+              });
 
           if (summaries.isEmpty) {
             return Center(child: Text('No installment plans available.'.tr));
@@ -90,9 +96,16 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                               height: 50,
                               decoration: BoxDecoration(
                                 color: switch (status) {
-                                  InstallmentVisualStatus.paid => AppColors.success,
-                                  InstallmentVisualStatus.overdue => AppColors.danger,
-                                  InstallmentVisualStatus.pending => AppColors.warning,
+                                  InstallmentVisualStatus.paid =>
+                                    AppColors.success,
+                                  InstallmentVisualStatus.partial =>
+                                    AppColors.info,
+                                  InstallmentVisualStatus.overdue =>
+                                    AppColors.danger,
+                                  InstallmentVisualStatus.rescheduled =>
+                                    AppColors.brandPrimary,
+                                  InstallmentVisualStatus.pending =>
+                                    AppColors.warning,
                                 },
                                 borderRadius: BorderRadius.circular(18),
                               ),
@@ -116,7 +129,8 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    summary.product?.name ?? summary.plan.itemName,
+                                    summary.product?.name ??
+                                        summary.plan.itemName,
                                     style: const TextStyle(
                                       color: AppColors.brandAccent,
                                       fontSize: 13,
@@ -156,10 +170,10 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                                   'date': summary.nextDueDate == null
                                       ? 'N/A'.tr
                                       : summary.nextDueDate!
-                                          .toLocal()
-                                          .toString()
-                                          .split(' ')
-                                          .first,
+                                            .toLocal()
+                                            .toString()
+                                            .split(' ')
+                                            .first,
                                 }),
                                 style: TextStyle(
                                   color: secondaryText,
@@ -169,12 +183,10 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                               ),
                             ),
                             Text(
-                              '@count remaining'
-                                  .trParams({'count': '${summary.remainingInstallments}'}),
-                              style: TextStyle(
-                                color: mutedText,
-                                fontSize: 12,
-                              ),
+                              '@count remaining'.trParams({
+                                'count': '${summary.remainingInstallments}',
+                              }),
+                              style: TextStyle(color: mutedText, fontSize: 12),
                             ),
                           ],
                         ),
@@ -186,17 +198,23 @@ class InstallmentScheduleView extends GetView<InstallmentController> {
                             _infoChip(
                               context,
                               label: 'Total'.tr,
-                              value: CurrencyHelper.pkr.format(summary.plan.totalAmount),
+                              value: CurrencyHelper.pkr.format(
+                                summary.plan.totalAmount,
+                              ),
                             ),
                             _infoChip(
                               context,
                               label: 'Collected'.tr,
-                              value: CurrencyHelper.pkr.format(summary.collectedAmount),
+                              value: CurrencyHelper.pkr.format(
+                                summary.collectedAmount,
+                              ),
                             ),
                             _infoChip(
                               context,
                               label: 'Installment'.tr,
-                              value: CurrencyHelper.pkr.format(summary.plan.installmentAmount),
+                              value: CurrencyHelper.pkr.format(
+                                summary.plan.installmentAmount,
+                              ),
                             ),
                           ],
                         ),

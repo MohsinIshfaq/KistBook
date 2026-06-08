@@ -75,7 +75,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
       );
       for (final row in rows) {
         final installment = InstallmentModel.fromMap(row);
-        if (installment.isPaid) {
+        if (installment.isPaid || installment.paidAmount > 0) {
           continue;
         }
         final normalizedDue = DateHelper.shiftFridayToSaturday(
@@ -84,15 +84,10 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
         if (!normalizedDue.isBefore(effectiveToday)) {
           continue;
         }
-        final carriedDate = DateHelper.reconcileMissedDueDate(
-          currentDueDate: normalizedDue,
-          today: effectiveToday,
-        );
         await txn.update(
           DbConstants.installments,
           SyncMetadata.withLocalChange(DbConstants.installments, {
-            'current_due_date': carriedDate.toIso8601String(),
-            'status': InstallmentRecordStatus.missed.name,
+            'status': InstallmentRecordStatus.overdue.name,
           }),
           where: 'id = ?',
           whereArgs: [installment.id],
@@ -103,6 +98,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
 
   Future<List<DueInstallmentDetail>> fetchActiveInstallments({
     DateTime? today,
+    bool includePaid = false,
   }) async {
     final db = await super.db;
     final effectiveToday = DateHelper.startOfDay(today ?? DateTime.now());
@@ -139,7 +135,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     final details = <DueInstallmentDetail>[];
     for (final row in installmentRows) {
       final installment = InstallmentModel.fromMap(row);
-      if (installment.isPaid) {
+      if (!includePaid && installment.isPaid) {
         continue;
       }
       final plan = plans[installment.planId];
@@ -292,6 +288,8 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
   Future<void> rescheduleNextInstallment({
     required int planId,
     required DateTime targetDate,
+    String note = '',
+    bool manualSyncOnly = false,
   }) async {
     await synchronizedTransaction((txn) async {
       final rows = await txn.query(
@@ -310,13 +308,17 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
       final shiftedDate = DateHelper.shiftFridayToSaturday(
         DateHelper.startOfDay(targetDate),
       );
+      final rescheduledAt = DateTime.now().toUtc().toIso8601String();
 
       await txn.update(
         DbConstants.installments,
         SyncMetadata.withLocalChange(DbConstants.installments, {
-          'scheduled_due_date': shiftedDate.toIso8601String(),
+          'previous_due_date': installment.currentDueDate.toIso8601String(),
           'current_due_date': shiftedDate.toIso8601String(),
-          'status': InstallmentRecordStatus.pending.name,
+          'status': InstallmentRecordStatus.rescheduled.name,
+          'reschedule_note': note.trim(),
+          'rescheduled_at': rescheduledAt,
+          'manual_sync_only': manualSyncOnly ? 1 : 0,
         }),
         where: 'id = ?',
         whereArgs: [installment.id],
@@ -327,17 +329,32 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
   Future<void> rescheduleInstallment({
     required int installmentId,
     required DateTime targetDate,
+    String note = '',
+    bool manualSyncOnly = false,
   }) async {
     final shiftedDate = DateHelper.shiftFridayToSaturday(
       DateHelper.startOfDay(targetDate),
     );
-    await synchronizedWrite((db) {
+    await synchronizedWrite((db) async {
+      final rows = await db.query(
+        DbConstants.installments,
+        where: 'id = ? AND is_deleted = 0',
+        whereArgs: [installmentId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        return 0;
+      }
+      final installment = InstallmentModel.fromMap(rows.first);
       return db.update(
         DbConstants.installments,
         SyncMetadata.withLocalChange(DbConstants.installments, {
-          'scheduled_due_date': shiftedDate.toIso8601String(),
+          'previous_due_date': installment.currentDueDate.toIso8601String(),
           'current_due_date': shiftedDate.toIso8601String(),
-          'status': InstallmentRecordStatus.pending.name,
+          'status': InstallmentRecordStatus.rescheduled.name,
+          'reschedule_note': note.trim(),
+          'rescheduled_at': DateTime.now().toUtc().toIso8601String(),
+          'manual_sync_only': manualSyncOnly ? 1 : 0,
         }),
         where: 'id = ?',
         whereArgs: [installmentId],

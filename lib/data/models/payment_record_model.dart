@@ -9,7 +9,8 @@ class PaymentRecordModel implements BaseModel {
       installment_id INTEGER NOT NULL,
       amount REAL NOT NULL,
       paid_on TEXT NOT NULL,
-      note TEXT NOT NULL
+      note TEXT NOT NULL,
+      manual_sync_only INTEGER NOT NULL DEFAULT 0
     );
   ''';
 
@@ -34,14 +35,14 @@ class PaymentRecordModel implements BaseModel {
 
   @override
   Map<String, Object?> toMap() => {
-        'id': id,
-        'customer_id': customerId,
-        'plan_id': planId,
-        'installment_id': installmentId,
-        'amount': amount,
-        'paid_on': paidOn.toIso8601String(),
-        'note': note,
-      };
+    'id': id,
+    'customer_id': customerId,
+    'plan_id': planId,
+    'installment_id': installmentId,
+    'amount': amount,
+    'paid_on': paidOn.toIso8601String(),
+    'note': note,
+  };
 
   @override
   String get uniqueKey => 'id';
@@ -49,7 +50,8 @@ class PaymentRecordModel implements BaseModel {
   @override
   Object? get uniqueKeyValue => id;
 
-  factory PaymentRecordModel.fromMap(Map<String, Object?> map) => PaymentRecordModel(
+  factory PaymentRecordModel.fromMap(Map<String, Object?> map) =>
+      PaymentRecordModel(
         id: map['id'] as int?,
         customerId: map['customer_id'] as int,
         planId: map['plan_id'] as int,

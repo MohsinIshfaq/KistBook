@@ -8,6 +8,7 @@ import '../../data/datasources/product_remote_data_source.dart';
 import '../../data/datasources/runtime_bootstrap_remote_data_source.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/customer_repository.dart';
+import '../../data/repositories/customer_plan_refresh_repository.dart';
 import '../../data/repositories/customer_sync_repository.dart';
 import '../../data/repositories/customer_user_access_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
@@ -94,6 +95,16 @@ class InitialBinding extends Bindings {
         remoteDataSource: Get.find<InstallmentPlanRemoteDataSource>(),
         cursorStore: Get.find<SyncCursorStore>(),
         changeNotifier: Get.find<SyncChangeNotifier>(),
+      ),
+      permanent: true,
+    );
+    Get.put(
+      CustomerPlanRefreshRepository(
+        customerRepository: Get.find<CustomerRepository>(),
+        remoteDataSource: Get.find<CustomerRemoteDataSource>(),
+        productSyncRepository: Get.find<ProductSyncRepository>(),
+        installmentPlanSyncRepository:
+            Get.find<InstallmentPlanSyncRepository>(),
       ),
       permanent: true,
     );

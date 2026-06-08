@@ -36,9 +36,9 @@ class InstallmentPlanSummary {
   final List<InstallmentModel> installments;
 
   double get remainingAmount => installments.fold(
-        0,
-        (sum, item) => sum + item.remainingAmount.clamp(0, double.infinity),
-      );
+    0,
+    (sum, item) => sum + item.remainingAmount.clamp(0, double.infinity),
+  );
 
   double get collectedAmount =>
       (plan.totalAmount - remainingAmount).clamp(0, double.infinity);
@@ -81,12 +81,16 @@ class DashboardSnapshot {
   final List<DueInstallmentDetail> overdue;
   final List<DueInstallmentDetail> pending;
 
-  double get totalOutstanding =>
-      installments.fold(0, (sum, item) => sum + item.remainingAmount.clamp(0, double.infinity));
+  double get totalOutstanding => installments.fold(
+    0,
+    (sum, item) => sum + item.remainingAmount.clamp(0, double.infinity),
+  );
 
-  double get totalCollected => payments.fold(0, (sum, item) => sum + item.amount);
+  double get totalCollected =>
+      payments.fold(0, (sum, item) => sum + item.amount);
 
-  String get totalOutstandingLabel => CurrencyHelper.pkr.format(totalOutstanding);
+  String get totalOutstandingLabel =>
+      CurrencyHelper.pkr.format(totalOutstanding);
   String get totalCollectedLabel => CurrencyHelper.pkr.format(totalCollected);
 }
 
@@ -98,6 +102,8 @@ class CustomerHistoryEntry {
     required this.date,
     required this.isCredit,
     required this.status,
+    this.planId,
+    this.productIds = const [],
   });
 
   final String title;
@@ -106,6 +112,8 @@ class CustomerHistoryEntry {
   final DateTime date;
   final bool isCredit;
   final CustomerHistoryStatus status;
+  final int? planId;
+  final List<int> productIds;
 }
 
 enum CustomerHistoryStatus { paid, pending }
@@ -114,6 +122,7 @@ class CustomerProfile {
   const CustomerProfile({
     required this.customer,
     required this.plans,
+    this.products = const [],
     required this.installments,
     required this.payments,
     required this.history,
@@ -121,6 +130,7 @@ class CustomerProfile {
 
   final CustomerModel customer;
   final List<PurchasePlanModel> plans;
+  final List<ProductModel> products;
   final List<InstallmentModel> installments;
   final List<PaymentRecordModel> payments;
   final List<CustomerHistoryEntry> history;

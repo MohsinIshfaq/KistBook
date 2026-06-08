@@ -24,11 +24,11 @@ class InstallmentRepository extends BaseRepository implements InstallmentReposit
         if ($paidAmount >= $amount) {
             $status = InstallmentStatus::Paid;
         } elseif ($paidAmount > 0) {
-            $status = $installment->current_due_date->isBefore($today)
-                ? InstallmentStatus::Overdue
-                : InstallmentStatus::Partial;
+            $status = InstallmentStatus::Partial;
         } elseif ($installment->current_due_date->isBefore($today)) {
             $status = InstallmentStatus::Overdue;
+        } elseif ($installment->status === InstallmentStatus::Rescheduled) {
+            $status = InstallmentStatus::Rescheduled;
         }
 
         $installment->forceFill(['status' => $status->value])->save();

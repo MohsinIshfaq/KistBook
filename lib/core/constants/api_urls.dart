@@ -79,6 +79,10 @@ class API {
     return urlFormatter(api: 'customers/$customerId');
   }
 
+  static String URL_CUSTOMER_PLANS(String customerId) {
+    return urlFormatter(api: 'customers/$customerId/plans');
+  }
+
   static String URL_PRODUCT_DETAIL(String productId) {
     return urlFormatter(api: 'products/$productId');
   }

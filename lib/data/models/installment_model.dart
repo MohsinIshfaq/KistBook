@@ -12,7 +12,11 @@ class InstallmentModel implements BaseModel {
       current_due_date TEXT NOT NULL,
       amount REAL NOT NULL,
       paid_amount REAL NOT NULL,
-      status TEXT NOT NULL
+      status TEXT NOT NULL,
+      previous_due_date TEXT,
+      reschedule_note TEXT NOT NULL DEFAULT '',
+      rescheduled_at TEXT,
+      manual_sync_only INTEGER NOT NULL DEFAULT 0
     );
   ''';
 
@@ -25,6 +29,9 @@ class InstallmentModel implements BaseModel {
     required this.amount,
     required this.paidAmount,
     required this.status,
+    this.previousDueDate,
+    this.rescheduleNote = '',
+    this.rescheduledAt,
   });
 
   @override
@@ -36,16 +43,34 @@ class InstallmentModel implements BaseModel {
   final double amount;
   final double paidAmount;
   final InstallmentRecordStatus status;
+  final DateTime? previousDueDate;
+  final String rescheduleNote;
+  final DateTime? rescheduledAt;
 
-  double get remainingAmount => amount - paidAmount;
+  double get remainingAmount {
+    final remaining = amount - paidAmount;
+    return remaining <= 0.009 ? 0 : remaining;
+  }
+
   bool get isPaid => remainingAmount <= 0.009;
-  bool get wasMissed => status == InstallmentRecordStatus.missed;
+  bool get isPartial =>
+      !isPaid && (paidAmount > 0 || status == InstallmentRecordStatus.partial);
+  bool get isRescheduled => status == InstallmentRecordStatus.rescheduled;
+  bool get wasMissed =>
+      status == InstallmentRecordStatus.missed ||
+      status == InstallmentRecordStatus.overdue;
 
   InstallmentVisualStatus visualStatus(DateTime today) {
     if (isPaid) {
       return InstallmentVisualStatus.paid;
     }
-    if (wasMissed || scheduledDueDate.isBefore(DateHelper.startOfDay(today))) {
+    if (isPartial) {
+      return InstallmentVisualStatus.partial;
+    }
+    if (isRescheduled) {
+      return InstallmentVisualStatus.rescheduled;
+    }
+    if (wasMissed || currentDueDate.isBefore(DateHelper.startOfDay(today))) {
       return InstallmentVisualStatus.overdue;
     }
     return InstallmentVisualStatus.pending;
@@ -53,15 +78,18 @@ class InstallmentModel implements BaseModel {
 
   @override
   Map<String, Object?> toMap() => {
-        'id': id,
-        'plan_id': planId,
-        'sequence_number': sequenceNumber,
-        'scheduled_due_date': scheduledDueDate.toIso8601String(),
-        'current_due_date': currentDueDate.toIso8601String(),
-        'amount': amount,
-        'paid_amount': paidAmount,
-        'status': status.name,
-      };
+    'id': id,
+    'plan_id': planId,
+    'sequence_number': sequenceNumber,
+    'scheduled_due_date': scheduledDueDate.toIso8601String(),
+    'current_due_date': currentDueDate.toIso8601String(),
+    'amount': amount,
+    'paid_amount': paidAmount,
+    'status': status.name,
+    'previous_due_date': previousDueDate?.toIso8601String(),
+    'reschedule_note': rescheduleNote,
+    'rescheduled_at': rescheduledAt?.toIso8601String(),
+  };
 
   @override
   String get uniqueKey => 'id';
@@ -69,7 +97,8 @@ class InstallmentModel implements BaseModel {
   @override
   Object? get uniqueKeyValue => id;
 
-  factory InstallmentModel.fromMap(Map<String, Object?> map) => InstallmentModel(
+  factory InstallmentModel.fromMap(Map<String, Object?> map) =>
+      InstallmentModel(
         id: map['id'] as int?,
         planId: map['plan_id'] as int,
         sequenceNumber: map['sequence_number'] as int,
@@ -81,5 +110,16 @@ class InstallmentModel implements BaseModel {
           (value) => value.name == (map['status'] as String? ?? 'pending'),
           orElse: () => InstallmentRecordStatus.pending,
         ),
+        previousDueDate: _dateOrNull(map['previous_due_date']),
+        rescheduleNote: map['reschedule_note'] as String? ?? '',
+        rescheduledAt: _dateOrNull(map['rescheduled_at']),
       );
+
+  static DateTime? _dateOrNull(Object? value) {
+    final text = value?.toString();
+    if (text == null || text.trim().isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(text);
+  }
 }

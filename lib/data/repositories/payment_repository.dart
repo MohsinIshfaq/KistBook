@@ -22,6 +22,7 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
     required double amount,
     required DateTime paidOn,
     required String note,
+    bool manualSyncOnly = false,
   }) async {
     await synchronizedTransaction((txn) async {
       final installmentRows = await txn.query(
@@ -34,12 +35,12 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
         throw StateError('Installment not found');
       }
       final installment = installmentRows.first;
-      final remaining =
-          (installment['amount'] as num).toDouble() -
-          (installment['paid_amount'] as num).toDouble();
-      final normalizedAmount = amount.clamp(0, remaining).toDouble();
+      if (amount <= 0) {
+        throw StateError('Payment amount must be greater than zero.');
+      }
       final newPaidAmount =
-          (installment['paid_amount'] as num).toDouble() + normalizedAmount;
+          (installment['paid_amount'] as num).toDouble() + amount;
+      final installmentAmount = (installment['amount'] as num).toDouble();
 
       final planId = installment['plan_id'] as int;
       final planRows = await txn.query(
@@ -57,9 +58,10 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
         DbConstants.installments,
         SyncMetadata.withLocalChange(DbConstants.installments, {
           'paid_amount': newPaidAmount,
-          'status': newPaidAmount >= (installment['amount'] as num).toDouble()
+          'status': newPaidAmount >= installmentAmount
               ? InstallmentRecordStatus.paid.name
-              : installment['status'],
+              : InstallmentRecordStatus.partial.name,
+          'manual_sync_only': manualSyncOnly ? 1 : 0,
         }),
         where: 'id = ?',
         whereArgs: [installmentId],
@@ -71,9 +73,10 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
           'customer_id': customerId,
           'plan_id': planId,
           'installment_id': installmentId,
-          'amount': normalizedAmount,
+          'amount': amount,
           'paid_on': paidOn.toIso8601String(),
           'note': note,
+          'manual_sync_only': manualSyncOnly ? 1 : 0,
         }),
       );
     });

@@ -156,7 +156,11 @@ class SessionManager {
       await _secureStorage.write(key: _apiTokenKey, value: legacyToken);
     }
     await _preferences.remove(_apiTokenKey);
-
+    // Dialy installment
+    //
+    // saleman collect kre ya kuch date update kre to card hide na ho status change ho
+    //
+    // or save button k click
     final secureUserData = await _secureStorage.read(key: _userDataKey);
     final legacyUserData = _preferences.getString(_userDataKey);
     if ((secureUserData == null || secureUserData.isEmpty) &&

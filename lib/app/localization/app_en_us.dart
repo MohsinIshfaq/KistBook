@@ -137,6 +137,16 @@ const Map<String, String> appEnUs = {
   'Add Installment Plan': 'Add Installment Plan',
   'Manage Plans': 'Manage Plans',
   'History': 'History',
+  'Plans & History': 'Plans & History',
+  'All Products': 'All Products',
+  'No plan history found for selected filters.':
+      'No plan history found for selected filters.',
+  'Refreshing plan details from server...':
+      'Refreshing plan details from server...',
+  'Loading customer plan details...': 'Loading customer plan details...',
+  'Unable to refresh plan details. Showing saved local data.':
+      'Unable to refresh plan details. Showing saved local data.',
+  'Retry': 'Retry',
   'Customer not found': 'Customer not found',
   'Customer Payment Detail': 'Customer Payment Detail',
   'No previous plan': 'No previous plan',
@@ -166,6 +176,7 @@ const Map<String, String> appEnUs = {
   '@count completed': '@count completed',
   'Add Product': 'Add Product',
   'Edit Product': 'Edit Product',
+  'Product': 'Product',
   'Brand name': 'Brand name',
   'Enter brand name': 'Enter brand name',
   'Product name': 'Product name',

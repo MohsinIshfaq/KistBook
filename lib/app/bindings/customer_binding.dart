@@ -10,6 +10,7 @@ class CustomerBinding extends Bindings {
         customerRepository: Get.find(),
         installmentRepository: Get.find(),
         accessControlService: Get.find(),
+        planRefreshRepository: Get.find(),
       ),
     );
   }

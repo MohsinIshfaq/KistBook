@@ -288,7 +288,9 @@ class InstallmentPlanSyncRepository {
     _changeNotifier?.notify(SyncResource.installmentPlans);
   }
 
-  Future<void> applyDownloadedRecords(List<Map<String, dynamic>> records) async {
+  Future<void> applyDownloadedRecords(
+    List<Map<String, dynamic>> records,
+  ) async {
     for (final record in records) {
       await applyDownloadedRecord(record);
     }
@@ -488,9 +490,12 @@ class InstallmentPlanSyncRepository {
         'scheduled_due_date':
             _string(schedule['scheduledDueDate']) ?? dateUpdated,
         'current_due_date': _string(schedule['currentDueDate']) ?? dateUpdated,
+        'previous_due_date': _string(schedule['previousDueDate']),
         'amount': _num(schedule['amount']),
         'paid_amount': _num(schedule['paidAmount']),
         'status': _string(schedule['status']) ?? 'pending',
+        'reschedule_note': _string(schedule['rescheduleNote']) ?? '',
+        'rescheduled_at': _string(schedule['rescheduledAt']),
         'created_at': _string(schedule['createdAt']) ?? dateUpdated,
         'updated_at': dateUpdated,
       })..remove('id');

@@ -14,13 +14,18 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       InstallmentVisualStatus.paid => AppColors.success,
+      InstallmentVisualStatus.partial => const Color(0xFFF97316),
       InstallmentVisualStatus.overdue => AppColors.danger,
-      InstallmentVisualStatus.pending => AppColors.warning,
+      InstallmentVisualStatus.rescheduled => AppColors.brandPrimary,
+      InstallmentVisualStatus.pending => const Color(0xFFEAB308),
     };
-    final text = label ??
+    final text =
+        label ??
         switch (status) {
-          InstallmentVisualStatus.paid => 'Paid'.tr,
+          InstallmentVisualStatus.paid => 'Collected'.tr,
+          InstallmentVisualStatus.partial => 'Partial'.tr,
           InstallmentVisualStatus.overdue => 'Overdue'.tr,
+          InstallmentVisualStatus.rescheduled => 'Rescheduled'.tr,
           InstallmentVisualStatus.pending => 'Pending'.tr,
         };
 

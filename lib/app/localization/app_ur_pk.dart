@@ -135,6 +135,16 @@ const Map<String, String> appUrPk = {
   'Add Installment Plan': 'قسطی پلان شامل کریں',
   'Manage Plans': 'پلان مینیج کریں',
   'History': 'ہسٹری',
+  'Plans & History': 'پلان اور ہسٹری',
+  'All Products': 'تمام پروڈکٹس',
+  'No plan history found for selected filters.':
+      'منتخب فلٹرز کے لیے کوئی پلان ہسٹری نہیں ملی۔',
+  'Refreshing plan details from server...':
+      'سرور سے پلان کی تفصیل تازہ کی جا رہی ہے...',
+  'Loading customer plan details...': 'کسٹمر پلان کی تفصیل لوڈ ہو رہی ہے...',
+  'Unable to refresh plan details. Showing saved local data.':
+      'پلان کی تفصیل تازہ نہیں ہو سکی۔ محفوظ لوکل ڈیٹا دکھایا جا رہا ہے۔',
+  'Retry': 'دوبارہ کوشش',
   'Customer not found': 'کسٹمر نہیں ملا',
   'Customer Payment Detail': 'کسٹمر ادائیگی کی تفصیل',
   'No previous plan': 'کوئی پچھلا پلان نہیں',
@@ -163,6 +173,7 @@ const Map<String, String> appUrPk = {
   '@count completed': '@count مکمل',
   'Add Product': 'پروڈکٹ شامل کریں',
   'Edit Product': 'پروڈکٹ میں ترمیم',
+  'Product': 'پروڈکٹ',
   'Brand name': 'برانڈ کا نام',
   'Enter brand name': 'برانڈ کا نام درج کریں',
   'Product name': 'پروڈکٹ کا نام',

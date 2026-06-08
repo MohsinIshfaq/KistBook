@@ -30,9 +30,12 @@ class Installment extends Model
         'item_sequence_number',
         'scheduled_due_date',
         'current_due_date',
+        'previous_due_date',
         'amount',
         'paid_amount',
         'status',
+        'reschedule_note',
+        'rescheduled_at',
         'is_deleted',
     ];
 
@@ -43,9 +46,11 @@ class Installment extends Model
             'item_sequence_number' => 'integer',
             'scheduled_due_date' => 'date',
             'current_due_date' => 'date',
+            'previous_due_date' => 'date',
             'amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'status' => InstallmentStatus::class,
+            'rescheduled_at' => 'datetime',
             'is_deleted' => 'boolean',
         ];
     }

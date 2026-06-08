@@ -194,6 +194,12 @@ class DbHelper {
         if (oldVersion < 14) {
           await _applyCustomerProductApiSchema(db);
         }
+        if (oldVersion < 15) {
+          await _applyInstallmentRescheduleSchema(db);
+        }
+        if (oldVersion < 16) {
+          await _applyManualCollectionSyncSchema(db);
+        }
       },
     );
 
@@ -232,6 +238,8 @@ class DbHelper {
     }
     await _ensureSyncMetadata(db);
     await _applyCustomerProductApiSchema(db);
+    await _applyInstallmentRescheduleSchema(db);
+    await _applyManualCollectionSyncSchema(db);
   }
 
   Future<void> _applyCustomerProductApiSchema(Database db) async {
@@ -286,6 +294,37 @@ class DbHelper {
       ),
     );
     await db.execute(ProductVariantAttributeModel.createVariantIndexQuery);
+  }
+
+  Future<void> _applyInstallmentRescheduleSchema(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      DbConstants.installments,
+      'previous_due_date TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.installments,
+      "reschedule_note TEXT NOT NULL DEFAULT ''",
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.installments,
+      'rescheduled_at TEXT',
+    );
+  }
+
+  Future<void> _applyManualCollectionSyncSchema(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      DbConstants.installments,
+      'manual_sync_only INTEGER NOT NULL DEFAULT 0',
+    );
+    await _addColumnIfMissing(
+      db,
+      DbConstants.payments,
+      'manual_sync_only INTEGER NOT NULL DEFAULT 0',
+    );
   }
 
   Future<void> _ensureSyncMetadata(Database db) async {

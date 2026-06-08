@@ -7,6 +7,7 @@ import '../models/customer_model.dart';
 import '../models/dashboard_models.dart';
 import '../models/installment_model.dart';
 import '../models/payment_record_model.dart';
+import '../models/product_model.dart';
 import '../models/purchase_plan_model.dart';
 import 'generic_repository.dart';
 import 'sql_expression.dart';
@@ -69,6 +70,22 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     });
   }
 
+  Future<String?> serverIdForCustomer(int customerId) async {
+    final db = await super.db;
+    final rows = await db.query(
+      DbConstants.customers,
+      columns: [SyncMetadata.serverId],
+      where: 'id = ? AND is_deleted = 0',
+      whereArgs: [customerId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final value = rows.first[SyncMetadata.serverId]?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
   Future<CustomerProfile?> fetchCustomerProfile(int customerId) async {
     final customer = await findOne(customerId);
     if (customer == null) {
@@ -83,6 +100,18 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
       whereArgs: [customerId],
       orderBy: 'created_at DESC',
     )).map(PurchasePlanModel.fromMap).toList();
+    final productIds = plans.expand((plan) => plan.productIds).toSet();
+    final products = <ProductModel>[];
+    if (productIds.isNotEmpty) {
+      final placeholders = List.filled(productIds.length, '?').join(',');
+      products.addAll(
+        (await db.query(
+          DbConstants.products,
+          where: 'id IN ($placeholders) AND is_deleted = 0',
+          whereArgs: productIds.toList(),
+        )).map(ProductModel.fromMap),
+      );
+    }
     final payments = (await db.query(
       DbConstants.payments,
       where:
@@ -110,6 +139,8 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
           date: plan.createdAt,
           isCredit: false,
           status: CustomerHistoryStatus.pending,
+          planId: plan.id,
+          productIds: plan.productIds,
         ),
       );
       if (plan.depositAmount > 0) {
@@ -121,6 +152,8 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
             date: plan.createdAt,
             isCredit: true,
             status: CustomerHistoryStatus.paid,
+            planId: plan.id,
+            productIds: plan.productIds,
           ),
         );
       }
@@ -137,11 +170,17 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
             date: installment.currentDueDate,
             isCredit: false,
             status: CustomerHistoryStatus.pending,
+            planId: plan.id,
+            productIds: plan.productIds,
           ),
         );
       }
     }
 
+    final productIdsByPlanId = {
+      for (final plan in plans)
+        if (plan.id != null) plan.id!: plan.productIds,
+    };
     for (final payment in payments) {
       history.add(
         CustomerHistoryEntry(
@@ -151,6 +190,8 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
           date: payment.paidOn,
           isCredit: true,
           status: CustomerHistoryStatus.paid,
+          planId: payment.planId,
+          productIds: productIdsByPlanId[payment.planId] ?? const [],
         ),
       );
     }
@@ -160,6 +201,7 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
     return CustomerProfile(
       customer: customer,
       plans: plans,
+      products: products,
       installments: installments,
       payments: payments,
       history: history,
@@ -252,6 +294,7 @@ class CustomerRepository extends GenericRepository<CustomerModel> {
       }
 
       if (installment.status == InstallmentRecordStatus.missed ||
+          installment.status == InstallmentRecordStatus.overdue ||
           (paidDate != null &&
               DateHelper.startOfDay(paidDate).isAfter(dueDate)) ||
           (paidDate == null && dueDate.isBefore(today)) ||

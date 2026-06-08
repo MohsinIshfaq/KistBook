@@ -54,7 +54,10 @@ class SyncService {
     _isStopping = false;
   }
 
-  Future<bool> syncNow({bool silent = true}) async {
+  Future<bool> syncNow({
+    bool silent = true,
+    bool includeManualSyncOnly = false,
+  }) async {
     if (_isStopping || _isRunning || _sessionManager.apiToken.isEmpty) {
       return false;
     }
@@ -64,7 +67,7 @@ class SyncService {
       await _customerSyncUseCase?.uploadPending();
       await _productSyncUseCase?.uploadPending();
       await _installmentPlanSyncUseCase?.uploadPending();
-      await _uploadPendingChanges();
+      await _uploadPendingChanges(includeManualSyncOnly: includeManualSyncOnly);
       await _customerSyncUseCase?.downloadLatest();
       await _productSyncUseCase?.downloadLatest();
       await _installmentPlanSyncUseCase?.downloadLatest();
@@ -97,12 +100,20 @@ class SyncService {
     }
   }
 
-  Future<void> _uploadPendingChanges() async {
+  Future<void> _uploadPendingChanges({
+    required bool includeManualSyncOnly,
+  }) async {
     for (final tableName in _uploadOrder) {
       final database = await _dbHelper.database;
+      final holdManualCollectionRows =
+          !includeManualSyncOnly &&
+          (tableName == DbConstants.installments ||
+              tableName == DbConstants.payments);
       final dirtyRows = await database.query(
         tableName,
-        where: '${SyncMetadata.isSync} = 0',
+        where: holdManualCollectionRows
+            ? '${SyncMetadata.isSync} = 0 AND COALESCE(manual_sync_only, 0) = 0'
+            : '${SyncMetadata.isSync} = 0',
         orderBy: 'id ASC',
       );
       if (dirtyRows.isEmpty) {
@@ -314,6 +325,9 @@ class SyncService {
           'amount': row['amount'],
           'paid_amount': row['paid_amount'],
           'status': _string(row, 'status'),
+          'previous_due_date': _string(row, 'previous_due_date'),
+          'reschedule_note': _string(row, 'reschedule_note'),
+          'rescheduled_at': _string(row, 'rescheduled_at'),
         });
       case DbConstants.payments:
         final customerUuid = await _serverIdForLocalId(
@@ -429,6 +443,9 @@ class SyncService {
               row['date_updated']?.toString() ??
               DateTime.now().toUtc().toIso8601String(),
           SyncMetadata.isDeleted: row['is_deleted'] == true ? 1 : 0,
+          if (tableName == DbConstants.installments ||
+              tableName == DbConstants.payments)
+            'manual_sync_only': 0,
         }),
         where: 'id = ?',
         whereArgs: [localId],
@@ -479,6 +496,9 @@ class SyncService {
           record['updated_at']?.toString() ??
           DateTime.now().toUtc().toIso8601String(),
       SyncMetadata.isDeleted: record['is_deleted'] == true ? 1 : 0,
+      if (tableName == DbConstants.installments ||
+          tableName == DbConstants.payments)
+        'manual_sync_only': 0,
     })..remove('id');
 
     if (existing == null) {
@@ -613,6 +633,9 @@ class SyncService {
           'status':
               record['status']?.toString() ??
               InstallmentRecordStatus.pending.name,
+          'previous_due_date': record['previous_due_date']?.toString(),
+          'reschedule_note': record['reschedule_note']?.toString() ?? '',
+          'rescheduled_at': record['rescheduled_at']?.toString(),
         };
       case DbConstants.payments:
         final customerId = await _localIdForServerId(

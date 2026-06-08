@@ -6,6 +6,7 @@ import '../../app/bindings/installment_binding.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/constants/app_enums.dart';
 import '../../core/utils/currency_helper.dart';
+import '../../core/widgets/app_loading_overlay.dart';
 import '../../data/models/dashboard_models.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../services/session_manager.dart';
@@ -26,6 +27,9 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
   final dateFormat = DateFormat('dd MMM yyyy');
   final installmentRepository = Get.find<InstallmentRepository>();
   CustomerHistoryFilter selectedFilter = CustomerHistoryFilter.all;
+  int? selectedProductId;
+
+  int get _customerId => Get.arguments as int;
 
   @override
   void initState() {
@@ -34,8 +38,24 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
       if (!mounted) {
         return;
       }
-      controller.loadProfile(Get.arguments as int);
+      _loadCustomerProfile();
     });
+  }
+
+  Future<void> _loadCustomerProfile() async {
+    await controller.loadProfile(_customerId, refreshRemote: false);
+    if (!mounted || controller.profile == null) {
+      return;
+    }
+    await _refreshCustomerPlansWithOverlay();
+  }
+
+  Future<void> _refreshCustomerPlansWithOverlay() {
+    return AppLoadingOverlay.run(
+      context,
+      message: 'Loading customer plan details...',
+      task: () => controller.refreshProfilePlans(_customerId),
+    );
   }
 
   @override
@@ -51,7 +71,16 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
           }
           final profile = logic.profile!;
           final theme = Theme.of(context);
+          final productOptions = _productOptions(profile);
+          final activeProductId =
+              productOptions.any((item) => item.id == selectedProductId)
+              ? selectedProductId
+              : null;
           final filteredHistory = profile.history.where((item) {
+            if (activeProductId != null &&
+                !item.productIds.contains(activeProductId)) {
+              return false;
+            }
             switch (selectedFilter) {
               case CustomerHistoryFilter.all:
                 return true;
@@ -123,42 +152,56 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                             : Icons.edit_note_rounded,
                       ),
                       label: Text(
-                        (profile.plans.isEmpty ? 'Add Installment Plan' : 'Manage Plans').tr,
+                        (profile.plans.isEmpty
+                                ? 'Add Installment Plan'
+                                : 'Manage Plans')
+                            .tr,
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 24),
+              if (logic.isRefreshingProfile) ...[
+                _refreshInfoBanner(context),
+                const SizedBox(height: 12),
+              ],
+              if (logic.profileRefreshError != null) ...[
+                _refreshErrorBanner(context, logic.profileRefreshError!),
+                const SizedBox(height: 12),
+              ],
               Text(
-                'History'.tr,
+                'Plans & History'.tr,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _filterChip(CustomerHistoryFilter.all, 'All'.tr),
-                  _filterChip(CustomerHistoryFilter.paid, 'Paid'.tr),
-                  _filterChip(CustomerHistoryFilter.pending, 'Pending'.tr),
-                ],
+              _filterToolbar(
+                context,
+                productOptions: productOptions,
+                activeProductId: activeProductId,
               ),
               const SizedBox(height: 12),
-              if (filteredHistory.isEmpty)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Text('No history found for this filter.'.tr),
-                  ),
+              if (profile.plans.isEmpty)
+                _emptyStateCard(
+                  context,
+                  icon: Icons.receipt_long_outlined,
+                  title: 'No plans found for this customer.'.tr,
+                )
+              else if (filteredHistory.isEmpty)
+                _emptyStateCard(
+                  context,
+                  icon: Icons.filter_alt_off_outlined,
+                  title: 'No plan history found for selected filters.'.tr,
                 )
               else
                 ...filteredHistory.map(
                   (item) => Card(
                     child: ListTile(
                       title: Text(item.title),
-                      subtitle: Text('${item.subtitle}\n${dateFormat.format(item.date)}'),
+                      subtitle: Text(
+                        '${item.subtitle}\n${dateFormat.format(item.date)}',
+                      ),
                       isThreeLine: true,
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -179,6 +222,186 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
     );
   }
 
+  List<_ProductFilterOption> _productOptions(CustomerProfile profile) {
+    final productsById = {
+      for (final product in profile.products)
+        if (product.id != null) product.id!: product,
+    };
+    final seen = <int>{};
+    final options = <_ProductFilterOption>[];
+    for (final plan in profile.plans) {
+      for (final productId in plan.productIds) {
+        if (!seen.add(productId)) {
+          continue;
+        }
+        final product = productsById[productId];
+        final label = product == null || product.name.trim().isEmpty
+            ? (plan.itemName.trim().isEmpty
+                  ? 'Product #$productId'
+                  : plan.itemName)
+            : product.name;
+        options.add(_ProductFilterOption(id: productId, label: label));
+      }
+    }
+    options.sort((a, b) => a.label.compareTo(b.label));
+    return options;
+  }
+
+  Widget _filterToolbar(
+    BuildContext context, {
+    required List<_ProductFilterOption> productOptions,
+    required int? activeProductId,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.04)
+            : AppColors.surfaceTint,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<int?>(
+            key: ValueKey(activeProductId ?? -1),
+            initialValue: activeProductId,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'Product'.tr,
+              prefixIcon: const Icon(Icons.inventory_2_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+            ),
+            items: [
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text('All Products'.tr),
+              ),
+              ...productOptions.map(
+                (item) => DropdownMenuItem<int?>(
+                  value: item.id,
+                  child: Text(item.label, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() => selectedProductId = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _filterChip(CustomerHistoryFilter.all, 'All'.tr),
+              _filterChip(CustomerHistoryFilter.paid, 'Paid'.tr),
+              _filterChip(CustomerHistoryFilter.pending, 'Pending'.tr),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _refreshInfoBanner(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Refreshing plan details from server...'.tr,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _refreshErrorBanner(BuildContext context, String message) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.cloud_off_outlined, color: AppColors.warning),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _refreshCustomerPlansWithOverlay,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text('Retry'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyStateCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Icon(icon, color: theme.colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _filterChip(CustomerHistoryFilter filter, String label) {
     return ChoiceChip(
       label: Text(label),
@@ -194,7 +417,9 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: (isPaid ? AppColors.success : AppColors.warning).withValues(alpha: 0.14),
+        color: (isPaid ? AppColors.success : AppColors.warning).withValues(
+          alpha: 0.14,
+        ),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -228,16 +453,13 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
       if (summary == null) {
         return;
       }
-      await Get.to(
-        () => const InstallmentPlanEditView(),
-        arguments: summary,
-      );
+      await Get.to(() => const InstallmentPlanEditView(), arguments: summary);
     }
 
     if (!mounted) {
       return;
     }
-    await controller.loadProfile(Get.arguments as int);
+    await controller.loadProfile(_customerId, refreshRemote: false);
   }
 
   Widget _detailRow(
@@ -333,7 +555,9 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
                       Text(
                         subtitle,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.92),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.92,
+                          ),
                         ),
                       ),
                     ],
@@ -350,6 +574,13 @@ class _CustomerDetailViewState extends State<CustomerDetailView> {
       ),
     );
   }
+}
+
+class _ProductFilterOption {
+  const _ProductFilterOption({required this.id, required this.label});
+
+  final int id;
+  final String label;
 }
 
 enum CustomerHistoryFilter { all, paid, pending }

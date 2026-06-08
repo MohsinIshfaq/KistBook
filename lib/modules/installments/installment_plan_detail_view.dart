@@ -17,7 +17,8 @@ class InstallmentPlanDetailView extends StatefulWidget {
   const InstallmentPlanDetailView({super.key});
 
   @override
-  State<InstallmentPlanDetailView> createState() => _InstallmentPlanDetailViewState();
+  State<InstallmentPlanDetailView> createState() =>
+      _InstallmentPlanDetailViewState();
 }
 
 class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
@@ -104,14 +105,14 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                                 children: [
                                   Text(
                                     summary.customer.name,
-                                    style: theme.textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.w800),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     plans.isEmpty
-                                        ? (summary.product?.name ?? summary.plan.itemName)
+                                        ? (summary.product?.name ??
+                                              summary.plan.itemName)
                                         : '${plans.length} product plans linked',
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: AppColors.brandAccent,
@@ -129,8 +130,16 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                         const SizedBox(height: 18),
                         _detailRow(context, 'Phone', summary.customer.phone),
                         _detailRow(context, 'CNIC', summary.customer.cnic),
-                        _detailRow(context, 'Reference', summary.customer.reference),
-                        _detailRow(context, 'Address', summary.customer.address),
+                        _detailRow(
+                          context,
+                          'Reference',
+                          summary.customer.reference,
+                        ),
+                        _detailRow(
+                          context,
+                          'Address',
+                          summary.customer.address,
+                        ),
                       ],
                     ),
                   ),
@@ -157,16 +166,23 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                         else
                           ...plans.map((plan) {
                             final product = _findProduct(plan);
-                            final installments = profile?.installments
+                            final installments =
+                                profile?.installments
                                     .where((item) => item.planId == plan.id)
                                     .toList() ??
                                 const [];
                             final remainingAmount = installments.fold<double>(
                               0,
                               (sum, item) =>
-                                  sum + item.remainingAmount.clamp(0, double.infinity),
+                                  sum +
+                                  item.remainingAmount.clamp(
+                                    0,
+                                    double.infinity,
+                                  ),
                             );
-                            final nextInstallment = installments.isEmpty ? null : installments.first;
+                            final nextInstallment = installments.isEmpty
+                                ? null
+                                : installments.first;
                             final visualStatus = nextInstallment == null
                                 ? InstallmentVisualStatus.paid
                                 : nextInstallment.visualStatus(DateTime.now());
@@ -184,28 +200,34 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               product == null
                                                   ? plan.itemName
-                                                  : '${product.brandName} ${product.name}'.trim(),
-                                              style: theme.textTheme.bodyMedium?.copyWith(
-                                                color: theme.colorScheme.onSurface,
-                                                fontWeight: FontWeight.w800,
-                                              ),
+                                                  : '${product.brandName} ${product.name}'
+                                                        .trim(),
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurface,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
                                             ),
                                             const SizedBox(height: 6),
                                             Text(
                                               product == null
                                                   ? 'SKU: Not provided'
                                                   : product.sku.isEmpty
-                                                      ? 'SKU: Not provided'
-                                                      : 'SKU: ${product.sku}',
+                                                  ? 'SKU: Not provided'
+                                                  : 'SKU: ${product.sku}',
                                               style: theme.textTheme.bodySmall,
                                             ),
                                           ],
@@ -228,29 +250,39 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                                       _metricChip(
                                         context,
                                         'Total',
-                                        CurrencyHelper.pkr.format(plan.totalAmount),
+                                        CurrencyHelper.pkr.format(
+                                          plan.totalAmount,
+                                        ),
                                       ),
                                       _metricChip(
                                         context,
                                         'Deposit',
-                                        CurrencyHelper.pkr.format(plan.depositAmount),
+                                        CurrencyHelper.pkr.format(
+                                          plan.depositAmount,
+                                        ),
                                       ),
                                       _metricChip(
                                         context,
                                         'Installment',
-                                        CurrencyHelper.pkr.format(plan.installmentAmount),
+                                        CurrencyHelper.pkr.format(
+                                          plan.installmentAmount,
+                                        ),
                                       ),
                                       _metricChip(
                                         context,
                                         'Remaining',
-                                        CurrencyHelper.pkr.format(remainingAmount),
+                                        CurrencyHelper.pkr.format(
+                                          remainingAmount,
+                                        ),
                                       ),
                                       _metricChip(
                                         context,
                                         'Next due',
                                         nextInstallment == null
                                             ? 'N/A'
-                                            : _dateLabel(nextInstallment.currentDueDate),
+                                            : _dateLabel(
+                                                nextInstallment.currentDueDate,
+                                              ),
                                       ),
                                     ],
                                   ),
@@ -268,7 +300,9 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                                   _detailRow(
                                     context,
                                     'Notes',
-                                    plan.notes.isEmpty ? 'Not provided' : plan.notes,
+                                    plan.notes.isEmpty
+                                        ? 'Not provided'
+                                        : plan.notes,
                                   ),
                                 ],
                               ),
@@ -286,49 +320,53 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...summary.installments.map(
-                  (installment) {
-                    final status = installment.visualStatus(DateTime.now());
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: switch (status) {
-                              InstallmentVisualStatus.paid => AppColors.success,
-                              InstallmentVisualStatus.overdue => AppColors.danger,
-                              InstallmentVisualStatus.pending => AppColors.warning,
-                            },
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.receipt_long_outlined,
-                            color: Colors.white,
-                          ),
+                ...summary.installments.map((installment) {
+                  final status = installment.visualStatus(DateTime.now());
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: switch (status) {
+                            InstallmentVisualStatus.paid => AppColors.success,
+                            InstallmentVisualStatus.partial => AppColors.info,
+                            InstallmentVisualStatus.overdue => AppColors.danger,
+                            InstallmentVisualStatus.rescheduled =>
+                              AppColors.brandPrimary,
+                            InstallmentVisualStatus.pending =>
+                              AppColors.warning,
+                          },
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        title: Text(
-                          'Installment #${installment.sequenceNumber}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        child: const Icon(
+                          Icons.receipt_long_outlined,
+                          color: Colors.white,
                         ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            'Due: ${_dateLabel(installment.currentDueDate)}\nAmount: ${CurrencyHelper.pkr.format(installment.amount)} • Remaining: ${CurrencyHelper.pkr.format(installment.remainingAmount)}',
-                            style: theme.textTheme.bodySmall?.copyWith(height: 1.35),
-                          ),
-                        ),
-                        isThreeLine: true,
-                        trailing: StatusBadge(status: status),
                       ),
-                    );
-                  },
-                ),
+                      title: Text(
+                        'Installment #${installment.sequenceNumber}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Due: ${_dateLabel(installment.currentDueDate)}\nAmount: ${CurrencyHelper.pkr.format(installment.amount)} • Remaining: ${CurrencyHelper.pkr.format(installment.remainingAmount)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      isThreeLine: true,
+                      trailing: StatusBadge(status: status),
+                    ),
+                  );
+                }),
               ],
             ),
     );

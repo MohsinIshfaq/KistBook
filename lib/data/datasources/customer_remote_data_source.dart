@@ -59,4 +59,11 @@ class CustomerRemoteDataSource {
       endpoint: API.URL_CUSTOMER_DETAIL(serverId),
     );
   }
+
+  Future<Map<String, dynamic>> planDetails(String serverId) {
+    return _apiServices.sendRequest(
+      method: ApiRequestMethod.get,
+      endpoint: API.URL_CUSTOMER_PLANS(serverId),
+    );
+  }
 }

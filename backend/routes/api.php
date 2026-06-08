@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('customers/sync', [CustomerSyncController::class, 'create']);
     Route::put('customers/sync', [CustomerSyncController::class, 'update']);
     Route::delete('customers/sync', [CustomerSyncController::class, 'delete']);
+    Route::get('customers/{uuid}/plans', [CustomerController::class, 'plans']);
     Route::get('customers/{uuid}', [CustomerController::class, 'show']);
     Route::get('products/sync', [ProductSyncController::class, 'download']);
     Route::post('products/sync', [ProductSyncController::class, 'create']);
