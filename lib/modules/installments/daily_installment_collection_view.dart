@@ -14,6 +14,7 @@ import '../../core/widgets/banner_alert.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../data/models/customer_model.dart';
 import '../../data/models/dashboard_models.dart';
+import '../../data/models/payment_record_model.dart';
 import '../../data/repositories/installment_repository.dart';
 import '../../data/repositories/payment_repository.dart';
 import '../../data/repositories/user_repository.dart';
@@ -37,6 +38,8 @@ class _DailyInstallmentCollectionViewState
   DateTime selectedDate = DateHelper.startOfDay(DateTime.now());
   bool isLoading = true;
   List<DueInstallmentDetail> dueItems = [];
+  Map<int, List<PaymentRecordModel>> paymentsByInstallmentIdForSelectedDate =
+      {};
   Map<int, String> assignedSalesmanByPlanId = {};
   final ScrollController _scrollController = ScrollController();
   Timer? _autoRefreshTimer;
@@ -67,24 +70,47 @@ class _DailyInstallmentCollectionViewState
     if (showLoader) {
       setState(() => isLoading = true);
     }
+    final selectedDay = DateHelper.startOfDay(selectedDate);
     final items = await accessControlService.filterDueInstallments(
       await installmentRepository.fetchActiveInstallments(
-        today: selectedDate,
+        today: DateTime.now(),
         includePaid: true,
       ),
+    );
+    final payments = await accessControlService.filterPayments(
+      await paymentRepository.fetchPaymentsForDate(selectedDay),
     );
     final assigneeNames = await _loadAssignedSalesmanNames();
     if (!mounted) {
       return;
     }
-    final selectedDay = DateHelper.startOfDay(selectedDate);
+    if (!_isSameCalendarDay(selectedDate, selectedDay)) {
+      return;
+    }
+    final visibleInstallmentIds = items
+        .map((item) => item.installment.id)
+        .whereType<int>()
+        .toSet();
+    final selectedDatePayments = <int, List<PaymentRecordModel>>{};
+    for (final payment in payments) {
+      if (!visibleInstallmentIds.contains(payment.installmentId)) {
+        continue;
+      }
+      if (!_isSameCalendarDay(payment.paidOn, selectedDay)) {
+        continue;
+      }
+      selectedDatePayments
+          .putIfAbsent(payment.installmentId, () => <PaymentRecordModel>[])
+          .add(payment);
+    }
     setState(() {
       dueItems =
           items
               .where(
                 (item) =>
-                    DateHelper.startOfDay(item.installment.currentDueDate) ==
-                    selectedDay,
+                    _showsOnSelectedDay(item, selectedDay) ||
+                    (item.installment.id != null &&
+                        selectedDatePayments.containsKey(item.installment.id)),
               )
               .toList()
             ..sort((a, b) {
@@ -98,6 +124,7 @@ class _DailyInstallmentCollectionViewState
                 b.installment.sequenceNumber,
               );
             });
+      paymentsByInstallmentIdForSelectedDate = selectedDatePayments;
       assignedSalesmanByPlanId = assigneeNames;
       _visibleCustomerCount = _pageSize;
       isLoading = false;
@@ -154,12 +181,14 @@ class _DailyInstallmentCollectionViewState
     required int installmentId,
     required DateTime targetDate,
     String note = '',
+    bool shiftFridayToSaturday = true,
   }) async {
     await installmentRepository.rescheduleInstallment(
       installmentId: installmentId,
       targetDate: targetDate,
       note: note,
       manualSyncOnly: true,
+      shiftFridayToSaturday: shiftFridayToSaturday,
     );
     await _loadData();
   }
@@ -190,7 +219,7 @@ class _DailyInstallmentCollectionViewState
       await _collectInstallment(
         detail: detail,
         amount: amount,
-        paidOn: DateTime.now(),
+        paidOn: selectedDate,
         note: 'Exact due amount collected from daily installment list',
       );
       showBannerAlert(
@@ -314,6 +343,10 @@ class _DailyInstallmentCollectionViewState
                       }
 
                       final collection = visibleCollections[index];
+                      final activeCount = collection.activeItemCount(
+                        selectedDate,
+                        paymentsByInstallmentIdForSelectedDate,
+                      );
                       return Card(
                         color: cardBackground,
                         child: Padding(
@@ -355,8 +388,7 @@ class _DailyInstallmentCollectionViewState
                                         Text(
                                           collection.customer.phone.isEmpty
                                               ? '@count kist due'.trParams({
-                                                  'count':
-                                                      '${collection.items.length}',
+                                                  'count': '$activeCount',
                                                 })
                                               : collection.customer.phone,
                                           style: TextStyle(
@@ -370,7 +402,10 @@ class _DailyInstallmentCollectionViewState
                                   ),
                                   Text(
                                     CurrencyHelper.pkr.format(
-                                      collection.totalAmount,
+                                      collection.totalAmountForDate(
+                                        selectedDate,
+                                        paymentsByInstallmentIdForSelectedDate,
+                                      ),
                                     ),
                                     style: TextStyle(
                                       color: primaryText,
@@ -382,194 +417,12 @@ class _DailyInstallmentCollectionViewState
                               ),
                               const SizedBox(height: 14),
                               ...collection.items.map(
-                                (detail) => Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: rowBackground,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  _productLabel(detail),
-                                                  style: TextStyle(
-                                                    color: primaryText,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Installment #@number'.trParams({
-                                                    'number':
-                                                        '${detail.installment.sequenceNumber}',
-                                                  }),
-                                                  style: TextStyle(
-                                                    color: secondaryText,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                CurrencyHelper.pkr.format(
-                                                  detail
-                                                      .installment
-                                                      .remainingAmount,
-                                                ),
-                                                style: TextStyle(
-                                                  color: primaryText,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              StatusBadge(
-                                                status: detail.installment
-                                                    .visualStatus(selectedDate),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 10,
-                                        runSpacing: 10,
-                                        children: [
-                                          _detailLine(
-                                            context,
-                                            label: 'Card Number'.tr,
-                                            value:
-                                                detail
-                                                    .customer
-                                                    .cardNumber
-                                                    .isEmpty
-                                                ? '-'
-                                                : detail.customer.cardNumber,
-                                          ),
-                                          _detailLine(
-                                            context,
-                                            label: 'Phone Number'.tr,
-                                            value: detail.customer.phone.isEmpty
-                                                ? '-'
-                                                : detail.customer.phone,
-                                          ),
-                                          _detailLine(
-                                            context,
-                                            label: 'Due Date'.tr,
-                                            value: _dateLabel(
-                                              detail.installment.currentDueDate,
-                                            ),
-                                          ),
-                                          _detailLine(
-                                            context,
-                                            label: 'Installment Amount'.tr,
-                                            value: CurrencyHelper.pkr.format(
-                                              detail.installment.amount,
-                                            ),
-                                          ),
-                                          _detailLine(
-                                            context,
-                                            label: 'Remaining Balance'.tr,
-                                            value: CurrencyHelper.pkr.format(
-                                              detail
-                                                  .installment
-                                                  .remainingAmount,
-                                            ),
-                                          ),
-                                          _detailLine(
-                                            context,
-                                            label: 'Assigned Salesman'.tr,
-                                            value:
-                                                assignedSalesmanByPlanId[detail
-                                                    .plan
-                                                    .id] ??
-                                                'Unassigned'.tr,
-                                          ),
-                                          if (detail
-                                                  .installment
-                                                  .previousDueDate !=
-                                              null)
-                                            _detailLine(
-                                              context,
-                                              label: 'Previous Due Date'.tr,
-                                              value: _dateLabel(
-                                                detail
-                                                    .installment
-                                                    .previousDueDate!,
-                                              ),
-                                            ),
-                                          if (detail
-                                              .installment
-                                              .rescheduleNote
-                                              .isNotEmpty)
-                                            _detailLine(
-                                              context,
-                                              label: 'Reschedule Note'.tr,
-                                              value: detail
-                                                  .installment
-                                                  .rescheduleNote,
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 10,
-                                        runSpacing: 10,
-                                        children: [
-                                          FilledButton.tonal(
-                                            onPressed: detail.installment.isPaid
-                                                ? null
-                                                : () =>
-                                                      _collectExactInstallment(
-                                                        detail,
-                                                      ),
-                                            child: Text('Yes'.tr),
-                                          ),
-                                          OutlinedButton(
-                                            onPressed: detail.installment.isPaid
-                                                ? null
-                                                : () async {
-                                                    await _showCollectionDialog(
-                                                      detail: detail,
-                                                    );
-                                                  },
-                                            child: Text('Custom'.tr),
-                                          ),
-                                          OutlinedButton(
-                                            onPressed: detail.installment.isPaid
-                                                ? null
-                                                : () async {
-                                                    await _showRescheduleDialog(
-                                                      detail: detail,
-                                                    );
-                                                  },
-                                            child: Text('Reschedule'.tr),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                (detail) => _buildCollectionItem(
+                                  context: context,
+                                  detail: detail,
+                                  rowBackground: rowBackground,
+                                  primaryText: primaryText,
+                                  secondaryText: secondaryText,
                                 ),
                               ),
                             ],
@@ -582,6 +435,401 @@ class _DailyInstallmentCollectionViewState
         ],
       ),
     );
+  }
+
+  Widget _buildCollectionItem({
+    required BuildContext context,
+    required DueInstallmentDetail detail,
+    required Color rowBackground,
+    required Color primaryText,
+    required Color secondaryText,
+  }) {
+    final isOriginalDayMoved = _isOriginalDayMovedOn(detail, selectedDate);
+    final isTargetDayMoved = _isTargetDayMovedOn(detail, selectedDate);
+    final selectedDatePayments = _paymentsForSelectedDate(detail);
+    final hasSelectedDatePayment = selectedDatePayments.isNotEmpty;
+    final isCollectionDateOnly = _isCollectionDateOnly(
+      detail,
+      selectedDatePayments,
+    );
+    final collectedAmountOnDate = selectedDatePayments.fold<double>(
+      0,
+      (sum, payment) => sum + payment.amount,
+    );
+    final hasMovedDate = _hasMovedDate(detail);
+    final moveIndicator = isOriginalDayMoved
+        ? 'Moved to @date'.trParams({
+            'date': _movedToLabel(
+              detail.installment.currentDueDate,
+              selectedDate,
+            ),
+          })
+        : isTargetDayMoved
+        ? 'Rescheduled From @date'.trParams({
+            'date': _dateLabel(detail.installment.previousDueDate!),
+          })
+        : null;
+    final collectionIndicator = hasSelectedDatePayment
+        ? 'Collected @amount on @date'.trParams({
+            'amount': CurrencyHelper.pkr.format(collectedAmountOnDate),
+            'date': _dateLabel(selectedDate),
+          })
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: rowBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: isOriginalDayMoved
+            ? Border.all(color: AppColors.warning.withValues(alpha: 0.55))
+            : isTargetDayMoved
+            ? Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.35))
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _productLabel(detail),
+                      style: TextStyle(
+                        color: primaryText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Installment #@number'.trParams({
+                        'number': '${detail.installment.sequenceNumber}',
+                      }),
+                      style: TextStyle(
+                        color: secondaryText,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    CurrencyHelper.pkr.format(
+                      detail.installment.remainingAmount,
+                    ),
+                    style: TextStyle(
+                      color: primaryText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  StatusBadge(
+                    status: detail.installment.visualStatus(selectedDate),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (moveIndicator != null) ...[
+            const SizedBox(height: 10),
+            _buildMoveIndicator(
+              context,
+              label: moveIndicator,
+              isViewOnly: isOriginalDayMoved,
+            ),
+          ],
+          if (collectionIndicator != null) ...[
+            const SizedBox(height: 10),
+            _buildCollectionIndicator(context, label: collectionIndicator),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _detailLine(
+                context,
+                label: 'Card Number'.tr,
+                value: detail.customer.cardNumber.isEmpty
+                    ? '-'
+                    : detail.customer.cardNumber,
+              ),
+              _detailLine(
+                context,
+                label: 'Phone Number'.tr,
+                value: detail.customer.phone.isEmpty
+                    ? '-'
+                    : detail.customer.phone,
+              ),
+              if (hasMovedDate) ...[
+                _detailLine(
+                  context,
+                  label: 'Original Date'.tr,
+                  value: _dateLabel(detail.installment.previousDueDate!),
+                ),
+                _detailLine(
+                  context,
+                  label: 'Moved Date'.tr,
+                  value: _dateLabel(detail.installment.currentDueDate),
+                ),
+              ] else
+                _detailLine(
+                  context,
+                  label: 'Due Date'.tr,
+                  value: _dateLabel(detail.installment.currentDueDate),
+                ),
+              _detailLine(
+                context,
+                label: 'Installment Amount'.tr,
+                value: CurrencyHelper.pkr.format(detail.installment.amount),
+              ),
+              _detailLine(
+                context,
+                label: 'Remaining Balance'.tr,
+                value: CurrencyHelper.pkr.format(
+                  detail.installment.remainingAmount,
+                ),
+              ),
+              _detailLine(
+                context,
+                label: 'Assigned Salesman'.tr,
+                value:
+                    assignedSalesmanByPlanId[detail.plan.id] ?? 'Unassigned'.tr,
+              ),
+              if (detail.installment.rescheduleNote.isNotEmpty)
+                _detailLine(
+                  context,
+                  label: 'Reschedule Note'.tr,
+                  value: detail.installment.rescheduleNote,
+                ),
+              if (hasSelectedDatePayment) ...[
+                _detailLine(
+                  context,
+                  label: 'Collected Date'.tr,
+                  value: _dateLabel(selectedDate),
+                ),
+                _detailLine(
+                  context,
+                  label: 'Collected Amount'.tr,
+                  value: CurrencyHelper.pkr.format(collectedAmountOnDate),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (isOriginalDayMoved)
+            _buildMovedViewOnlyMessage(context, detail)
+          else if (isCollectionDateOnly)
+            _buildCollectedOnDateMessage(context, amount: collectedAmountOnDate)
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.tonal(
+                  onPressed: detail.installment.isPaid
+                      ? null
+                      : () => _collectExactInstallment(detail),
+                  child: Text('Yes'.tr),
+                ),
+                OutlinedButton(
+                  onPressed: detail.installment.isPaid
+                      ? null
+                      : () async {
+                          await _showCollectionDialog(detail: detail);
+                        },
+                  child: Text('Custom'.tr),
+                ),
+                OutlinedButton(
+                  onPressed: detail.installment.isPaid
+                      ? null
+                      : () async {
+                          await _showRescheduleDialog(detail: detail);
+                        },
+                  child: Text('Reschedule'.tr),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoveIndicator(
+    BuildContext context, {
+    required String label,
+    required bool isViewOnly,
+  }) {
+    final color = isViewOnly ? AppColors.warning : AppColors.brandPrimary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.event_repeat_outlined, size: 16, color: color),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width - 120,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectionIndicator(
+    BuildContext context, {
+    required String label,
+  }) {
+    const color = AppColors.success;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.payments_outlined, size: 16, color: color),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width - 120,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMovedViewOnlyMessage(
+    BuildContext context,
+    DueInstallmentDetail detail,
+  ) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: AppColors.warning,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              detail.installment.isPaid
+                  ? 'Moved installment is already collected.'.tr
+                  : 'Collect on moved date: @date'.trParams({
+                      'date': _dateLabel(detail.installment.currentDueDate),
+                    }),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectedOnDateMessage(
+    BuildContext context, {
+    required double amount,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            size: 18,
+            color: AppColors.success,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Is date par @amount collect kiya gaya hai.'.trParams({
+                'amount': CurrencyHelper.pkr.format(amount),
+              }),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<PaymentRecordModel> _paymentsForSelectedDate(
+    DueInstallmentDetail detail,
+  ) {
+    final installmentId = detail.installment.id;
+    if (installmentId == null) {
+      return const [];
+    }
+    return paymentsByInstallmentIdForSelectedDate[installmentId] ?? const [];
+  }
+
+  bool _isCollectionDateOnly(
+    DueInstallmentDetail detail,
+    List<PaymentRecordModel> selectedDatePayments,
+  ) {
+    if (selectedDatePayments.isEmpty) {
+      return false;
+    }
+    return !_showsOnSelectedDay(detail, selectedDate);
   }
 
   Widget _buildStickyHeader(BuildContext context) {
@@ -795,6 +1043,7 @@ class _DailyInstallmentCollectionViewState
         detail: detail,
         dateLabel: _dateLabel,
         productLabel: _productLabel,
+        initialPaidOn: selectedDate,
       ),
     );
 
@@ -853,13 +1102,18 @@ class _DailyInstallmentCollectionViewState
       installmentId: detail.installment.id!,
       targetDate: input.targetDate,
       note: input.note,
+      shiftFridayToSaturday: input.shiftFridayToSaturday,
+    );
+    final effectiveDate = _effectiveRescheduleDate(
+      input.targetDate,
+      shiftFridayToSaturday: input.shiftFridayToSaturday,
     );
     showBannerAlert(
       title: 'Plan Updated'.tr,
       messages: [
         '@name installment moved to @date.'.trParams({
           'name': detail.customer.name,
-          'date': _dateLabel(input.targetDate),
+          'date': _dateLabel(effectiveDate),
         }),
         if (input.note.isNotEmpty) input.note,
       ],
@@ -868,6 +1122,18 @@ class _DailyInstallmentCollectionViewState
 
   static String _dateLabel(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}-${value.month.toString().padLeft(2, '0')}-${value.year}';
+
+  static String _movedToLabel(DateTime targetDate, DateTime selectedDate) {
+    final selectedDay = DateHelper.startOfDay(selectedDate);
+    final targetDay = DateHelper.startOfDay(targetDate);
+    if (_isSameCalendarDay(
+      targetDay,
+      selectedDay.add(const Duration(days: 1)),
+    )) {
+      return 'Tomorrow'.tr;
+    }
+    return _dateLabel(targetDay);
+  }
 
   static String _productLabel(DueInstallmentDetail detail) {
     final product = detail.product;
@@ -883,11 +1149,13 @@ class _CollectionDialog extends StatefulWidget {
     required this.detail,
     required this.dateLabel,
     required this.productLabel,
+    required this.initialPaidOn,
   });
 
   final DueInstallmentDetail detail;
   final String Function(DateTime value) dateLabel;
   final String Function(DueInstallmentDetail detail) productLabel;
+  final DateTime initialPaidOn;
 
   @override
   State<_CollectionDialog> createState() => _CollectionDialogState();
@@ -905,7 +1173,7 @@ class _CollectionDialogState extends State<_CollectionDialog> {
       text: widget.detail.installment.remainingAmount.toStringAsFixed(0),
     );
     noteController = TextEditingController();
-    paidOn = DateHelper.startOfDay(DateTime.now());
+    paidOn = DateHelper.startOfDay(widget.initialPaidOn);
   }
 
   @override
@@ -1025,6 +1293,7 @@ class _RescheduleDialog extends StatefulWidget {
 class _RescheduleDialogState extends State<_RescheduleDialog> {
   late final TextEditingController noteController;
   late DateTime targetDate;
+  bool shiftFridayToSaturday = true;
 
   @override
   void initState() {
@@ -1062,17 +1331,15 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
               leading: const Icon(Icons.event_repeat_outlined),
               title: Text('New Due Date'.tr),
               subtitle: Text(widget.dateLabel(targetDate)),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: targetDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null && mounted) {
-                  setState(() => targetDate = DateHelper.startOfDay(picked));
-                }
-              },
+              onTap: _pickStandardDate,
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _pickCustomDate,
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: Text('Custom Date'.tr),
+              ),
             ),
             AppTextField(
               label: 'Notes'.tr,
@@ -1095,6 +1362,7 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
               _RescheduleInput(
                 targetDate: targetDate,
                 note: noteController.text.trim(),
+                shiftFridayToSaturday: shiftFridayToSaturday,
               ),
             );
           },
@@ -1102,6 +1370,87 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _pickStandardDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _standardPickerInitialDate(targetDate),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      selectableDayPredicate: (date) =>
+          DateHelper.startOfDay(date).weekday != DateTime.friday,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        targetDate = DateHelper.startOfDay(picked);
+        shiftFridayToSaturday = true;
+      });
+    }
+  }
+
+  Future<void> _pickCustomDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: targetDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    final pickedDay = DateHelper.startOfDay(picked);
+    if (pickedDay.weekday != DateTime.friday) {
+      setState(() {
+        targetDate = pickedDay;
+        shiftFridayToSaturday = true;
+      });
+      return;
+    }
+
+    final resolution = await showDialog<_FridayDateResolution>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Friday Selected'.tr),
+        content: Text(
+          'Friday off day hai. Saturday use karna hai ya Friday keep karna hai?'
+              .tr,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(
+              dialogContext,
+            ).pop(_FridayDateResolution.keepFriday),
+            child: Text('Keep Friday'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(
+              dialogContext,
+            ).pop(_FridayDateResolution.useSaturday),
+            child: Text('Use Saturday'.tr),
+          ),
+        ],
+      ),
+    );
+    if (resolution == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      targetDate = resolution == _FridayDateResolution.useSaturday
+          ? DateHelper.shiftFridayToSaturday(pickedDay)
+          : pickedDay;
+      shiftFridayToSaturday = resolution == _FridayDateResolution.useSaturday;
+    });
+  }
+
+  DateTime _standardPickerInitialDate(DateTime value) {
+    final normalized = DateHelper.startOfDay(value);
+    if (normalized.weekday == DateTime.friday) {
+      return normalized.add(const Duration(days: 1));
+    }
+    return normalized;
   }
 }
 
@@ -1115,8 +1464,35 @@ class _DailyCustomerCollection {
     items.add(detail);
   }
 
-  double get totalAmount =>
-      items.fold(0, (sum, item) => sum + item.installment.remainingAmount);
+  int activeItemCount(
+    DateTime selectedDate,
+    Map<int, List<PaymentRecordModel>> paymentsByInstallmentId,
+  ) => items
+      .where(
+        (item) =>
+            !_isOriginalDayMovedOn(item, selectedDate) &&
+            !_isCollectionDateOnlyForMap(
+              item,
+              selectedDate,
+              paymentsByInstallmentId,
+            ),
+      )
+      .length;
+
+  double totalAmountForDate(
+    DateTime selectedDate,
+    Map<int, List<PaymentRecordModel>> paymentsByInstallmentId,
+  ) => items
+      .where(
+        (item) =>
+            !_isOriginalDayMovedOn(item, selectedDate) &&
+            !_isCollectionDateOnlyForMap(
+              item,
+              selectedDate,
+              paymentsByInstallmentId,
+            ),
+      )
+      .fold(0, (sum, item) => sum + item.installment.remainingAmount);
 }
 
 class _CollectionInput {
@@ -1132,8 +1508,83 @@ class _CollectionInput {
 }
 
 class _RescheduleInput {
-  const _RescheduleInput({required this.targetDate, required this.note});
+  const _RescheduleInput({
+    required this.targetDate,
+    required this.note,
+    required this.shiftFridayToSaturday,
+  });
 
   final DateTime targetDate;
   final String note;
+  final bool shiftFridayToSaturday;
+}
+
+enum _FridayDateResolution { useSaturday, keepFriday }
+
+bool _showsOnSelectedDay(DueInstallmentDetail item, DateTime selectedDay) {
+  final currentDueDay = DateHelper.startOfDay(item.installment.currentDueDate);
+  final previousDueDate = item.installment.previousDueDate;
+  final previousDueDay = previousDueDate == null
+      ? null
+      : DateHelper.startOfDay(previousDueDate);
+  return _isSameCalendarDay(currentDueDay, selectedDay) ||
+      (previousDueDay != null &&
+          _isSameCalendarDay(previousDueDay, selectedDay));
+}
+
+bool _hasMovedDate(DueInstallmentDetail item) {
+  final previousDueDate = item.installment.previousDueDate;
+  if (previousDueDate == null) {
+    return false;
+  }
+  return !_isSameCalendarDay(previousDueDate, item.installment.currentDueDate);
+}
+
+bool _isOriginalDayMovedOn(DueInstallmentDetail item, DateTime selectedDate) {
+  final previousDueDate = item.installment.previousDueDate;
+  if (previousDueDate == null || !_hasMovedDate(item)) {
+    return false;
+  }
+  return _isSameCalendarDay(previousDueDate, selectedDate);
+}
+
+bool _isTargetDayMovedOn(DueInstallmentDetail item, DateTime selectedDate) {
+  if (!_hasMovedDate(item)) {
+    return false;
+  }
+  return _isSameCalendarDay(item.installment.currentDueDate, selectedDate);
+}
+
+bool _isCollectionDateOnlyForMap(
+  DueInstallmentDetail item,
+  DateTime selectedDate,
+  Map<int, List<PaymentRecordModel>> paymentsByInstallmentId,
+) {
+  final installmentId = item.installment.id;
+  if (installmentId == null) {
+    return false;
+  }
+  final payments = paymentsByInstallmentId[installmentId] ?? const [];
+  if (payments.isEmpty) {
+    return false;
+  }
+  return !_showsOnSelectedDay(item, DateHelper.startOfDay(selectedDate));
+}
+
+bool _isSameCalendarDay(DateTime left, DateTime right) {
+  final normalizedLeft = DateHelper.startOfDay(left);
+  final normalizedRight = DateHelper.startOfDay(right);
+  return normalizedLeft.year == normalizedRight.year &&
+      normalizedLeft.month == normalizedRight.month &&
+      normalizedLeft.day == normalizedRight.day;
+}
+
+DateTime _effectiveRescheduleDate(
+  DateTime targetDate, {
+  required bool shiftFridayToSaturday,
+}) {
+  final targetDay = DateHelper.startOfDay(targetDate);
+  return shiftFridayToSaturday
+      ? DateHelper.shiftFridayToSaturday(targetDay)
+      : targetDay;
 }

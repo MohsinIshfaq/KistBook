@@ -322,6 +322,21 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                 const SizedBox(height: 12),
                 ...summary.installments.map((installment) {
                   final status = installment.visualStatus(DateTime.now());
+                  final previousDueDate = installment.previousDueDate;
+                  final hasMovedDate =
+                      previousDueDate != null &&
+                      _dateLabel(previousDueDate) !=
+                          _dateLabel(installment.currentDueDate);
+                  final scheduleLines = [
+                    if (hasMovedDate) ...[
+                      'Original Date: ${_dateLabel(previousDueDate)}',
+                      'Moved Date: ${_dateLabel(installment.currentDueDate)}',
+                    ] else
+                      'Due: ${_dateLabel(installment.currentDueDate)}',
+                    'Amount: ${CurrencyHelper.pkr.format(installment.amount)} • Remaining: ${CurrencyHelper.pkr.format(installment.remainingAmount)}',
+                    if (installment.rescheduleNote.isNotEmpty)
+                      'Reschedule Note: ${installment.rescheduleNote}',
+                  ];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -356,7 +371,7 @@ class _InstallmentPlanDetailViewState extends State<InstallmentPlanDetailView> {
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Due: ${_dateLabel(installment.currentDueDate)}\nAmount: ${CurrencyHelper.pkr.format(installment.amount)} • Remaining: ${CurrencyHelper.pkr.format(installment.remainingAmount)}',
+                          scheduleLines.join('\n'),
                           style: theme.textTheme.bodySmall?.copyWith(
                             height: 1.35,
                           ),

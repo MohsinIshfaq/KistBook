@@ -1,4 +1,5 @@
 import '../../core/constants/app_enums.dart';
+import '../../core/utils/date_helper.dart';
 import '../database/db_constants.dart';
 import '../database/db_helper.dart';
 import '../database/sync_metadata.dart';
@@ -15,6 +16,19 @@ class PaymentRepository extends GenericRepository<PaymentRecordModel> {
 
   Future<List<PaymentRecordModel>> fetchPayments() async {
     return getAll(orderBy: 'paid_on DESC');
+  }
+
+  Future<List<PaymentRecordModel>> fetchPaymentsForDate(DateTime date) async {
+    final database = await db;
+    final dayStart = DateHelper.startOfDay(date);
+    final nextDay = dayStart.add(const Duration(days: 1));
+    final rows = await database.query(
+      DbConstants.payments,
+      where: 'is_deleted = 0 AND paid_on >= ? AND paid_on < ?',
+      whereArgs: [dayStart.toIso8601String(), nextDay.toIso8601String()],
+      orderBy: 'paid_on DESC',
+    );
+    return rows.map(PaymentRecordModel.fromMap).toList();
   }
 
   Future<void> addPayment({

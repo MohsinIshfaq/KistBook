@@ -331,10 +331,12 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
     required DateTime targetDate,
     String note = '',
     bool manualSyncOnly = false,
+    bool shiftFridayToSaturday = true,
   }) async {
-    final shiftedDate = DateHelper.shiftFridayToSaturday(
-      DateHelper.startOfDay(targetDate),
-    );
+    final targetDay = DateHelper.startOfDay(targetDate);
+    final effectiveDate = shiftFridayToSaturday
+        ? DateHelper.shiftFridayToSaturday(targetDay)
+        : targetDay;
     await synchronizedWrite((db) async {
       final rows = await db.query(
         DbConstants.installments,
@@ -350,7 +352,7 @@ class InstallmentRepository extends GenericRepository<InstallmentModel> {
         DbConstants.installments,
         SyncMetadata.withLocalChange(DbConstants.installments, {
           'previous_due_date': installment.currentDueDate.toIso8601String(),
-          'current_due_date': shiftedDate.toIso8601String(),
+          'current_due_date': effectiveDate.toIso8601String(),
           'status': InstallmentRecordStatus.rescheduled.name,
           'reschedule_note': note.trim(),
           'rescheduled_at': DateTime.now().toUtc().toIso8601String(),

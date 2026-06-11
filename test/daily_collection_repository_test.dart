@@ -85,6 +85,37 @@ void main() {
     },
   );
 
+  test('reschedule can keep Friday when explicitly selected', () async {
+    final fixture = await _DailyCollectionFixture.create();
+    final scheduledDate = DateTime(2026, 6, 1);
+    final installmentId = await fixture.insertInstallment(
+      amount: 10000,
+      scheduledDueDate: scheduledDate,
+      currentDueDate: scheduledDate,
+    );
+    final repository = InstallmentRepository(fixture.dbHelper);
+
+    await repository.rescheduleInstallment(
+      installmentId: installmentId,
+      targetDate: DateTime(2026, 6, 12),
+      note: 'Explicit Friday change',
+      shiftFridayToSaturday: false,
+    );
+
+    final installment = await fixture.installmentRow(installmentId);
+    expect(
+      DateTime.parse(installment?['current_due_date'] as String),
+      DateTime(2026, 6, 12),
+    );
+    expect(
+      DateTime.parse(installment?['previous_due_date'] as String),
+      scheduledDate,
+    );
+    expect(installment?['status'], InstallmentRecordStatus.rescheduled.name);
+
+    await fixture.dispose();
+  });
+
   test('daily collection rows can be held for manual save sync only', () async {
     final fixture = await _DailyCollectionFixture.create();
     final installmentId = await fixture.insertInstallment(amount: 10000);
@@ -113,6 +144,35 @@ void main() {
 
     installment = await fixture.installmentRow(installmentId);
     expect(installment?['manual_sync_only'], 1);
+
+    await fixture.dispose();
+  });
+
+  test('payment repository fetches payments for selected date only', () async {
+    final fixture = await _DailyCollectionFixture.create();
+    final installmentId = await fixture.insertInstallment(amount: 10000);
+    final paymentRepository = PaymentRepository(fixture.dbHelper);
+
+    await paymentRepository.addPayment(
+      installmentId: installmentId,
+      amount: 3000,
+      paidOn: DateTime(2026, 6, 5, 14, 30),
+      note: 'Selected date collection',
+    );
+    await paymentRepository.addPayment(
+      installmentId: installmentId,
+      amount: 2000,
+      paidOn: DateTime(2026, 6, 6),
+      note: 'Next date collection',
+    );
+
+    final payments = await paymentRepository.fetchPaymentsForDate(
+      DateTime(2026, 6, 5),
+    );
+
+    expect(payments, hasLength(1));
+    expect(payments.single.amount, 3000);
+    expect(payments.single.note, 'Selected date collection');
 
     await fixture.dispose();
   });

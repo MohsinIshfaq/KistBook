@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -205,14 +206,14 @@ class AppShell extends StatelessWidget {
               icon: Icons.today_outlined,
               currentRoute: currentRoute,
             ),
-            if (!isRestrictedUser)
+            if (!isRestrictedUser && kDebugMode)
               _NavTile(
                 label: 'Payments'.tr,
                 route: AppRoutes.payments,
                 icon: Icons.payments_outlined,
                 currentRoute: currentRoute,
               ),
-            if (!isRestrictedUser)
+            if (!isRestrictedUser && kDebugMode)
               _NavTile(
                 label: 'Reports'.tr,
                 route: AppRoutes.reports,
@@ -226,8 +227,8 @@ class AppShell extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 currentRoute: currentRoute,
               ),
-            if (!isRestrictedUser) const SizedBox(height: 12),
-            if (!isRestrictedUser)
+            if (!isRestrictedUser && kDebugMode) const SizedBox(height: 12),
+            if (!isRestrictedUser && kDebugMode)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 padding: const EdgeInsets.all(14),
