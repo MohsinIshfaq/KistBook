@@ -25,6 +25,9 @@ class DashboardView extends GetView<DashboardController> {
     return AppShell(
       title: 'Dashboard'.tr,
       currentRoute: AppRoutes.dashboard,
+      centerTitle: true,
+      showSubtitle: false,
+      showSettingsAction: false,
       actions: [
         IconButton(
           onPressed: controller.loadDashboard,

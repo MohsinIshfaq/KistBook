@@ -4,6 +4,14 @@ const Map<String, String> appEnUs = {
       'Customize how KistBook looks and which language the app uses.',
   'Appearance': 'Appearance',
   'Language': 'Language',
+  'Preferences': 'Preferences',
+  'Full Access': 'Full Access',
+  'Limited Access': 'Limited Access',
+  'English language': 'English language',
+  'Urdu language': 'Urdu language',
+  'Owner': 'Owner',
+  'Admin': 'Admin',
+  'SalesMan': 'SalesMan',
   'Choose the theme that feels best for your team.':
       'Choose the theme that feels best for your team.',
   'Pick the language for the full application experience.':
@@ -17,6 +25,13 @@ const Map<String, String> appEnUs = {
   'Application theme': 'Application theme',
   'App language': 'App language',
   'Current selection': 'Current selection',
+  'Logout': 'Logout',
+  'Log out': 'Log out',
+  'Logging out...': 'Logging out...',
+  'Signing out...': 'Signing out...',
+  'Logged Out': 'Logged Out',
+  'Are you sure you want to log out of your account?':
+      'Are you sure you want to log out of your account?',
   'Welcome Back': 'Welcome Back',
   'Sign in with your phone number and password to continue to KistBook.':
       'Sign in with your phone number and password to continue to KistBook.',
@@ -59,9 +74,11 @@ const Map<String, String> appEnUs = {
   'Owner account already exists. Please login or ask the owner to add users.':
       'Owner account already exists. Please login or ask the owner to add users.',
   'Dashboard': 'Dashboard',
+  'Menu': 'Menu',
   'Customers': 'Customers',
   'Products': 'Products',
   'Installments': 'Installments',
+  'Installment Plan': 'Installment Plan',
   'Daily Collection': 'Daily Collection',
   'Payments': 'Payments',
   'Reports': 'Reports',
@@ -289,6 +306,18 @@ const Map<String, String> appEnUs = {
   'Date: @date': 'Date: @date',
   'No installments are due today.': 'No installments are due today.',
   'Customer': 'Customer',
+  'Search by card number or customer name':
+      'Search by card number or customer name',
+  'No customers found': 'No customers found',
+  'Try another card number or customer name.':
+      'Try another card number or customer name.',
   'Item': 'Item',
   'Payable': 'Payable',
+  'Search by name, brand or SKU': 'Search by name, brand or SKU',
+  'No products found': 'No products found',
+  'Try another product search term.': 'Try another product search term.',
+  'Search by customer, product or plan': 'Search by customer, product or plan',
+  'No installment plans found': 'No installment plans found',
+  'Try another customer, product or plan search.':
+      'Try another customer, product or plan search.',
 };

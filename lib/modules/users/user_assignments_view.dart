@@ -33,7 +33,7 @@ class _UserAssignmentsViewState extends State<UserAssignmentsView> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Assign Access'.tr)),
+      appBar: AppBar(centerTitle: true, title: Text('Assign Access'.tr)),
       body: GetBuilder<UserController>(
         builder: (logic) {
           if (logic.isLoading) {

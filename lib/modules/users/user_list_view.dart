@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/constants/app_enums.dart';
-import '../../core/widgets/app_shell.dart';
 import '../../services/session_manager.dart';
 import 'user_controller.dart';
 
@@ -16,9 +15,8 @@ class UserListView extends GetView<UserController> {
     final session = Get.find<SessionManager>();
     final isOwner = session.role == UserRole.owner;
 
-    return AppShell(
-      title: 'Users'.tr,
-      currentRoute: AppRoutes.users,
+    return Scaffold(
+      appBar: AppBar(centerTitle: true, title: Text('Users'.tr)),
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
               onPressed: () => Get.toNamed(AppRoutes.userForm),
@@ -32,14 +30,10 @@ class UserListView extends GetView<UserController> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!isOwner) {
-            return Center(
-              child: Text('Only owner can manage users.'.tr),
-            );
+            return Center(child: Text('Only owner can manage users.'.tr));
           }
           if (logic.users.isEmpty) {
-            return Center(
-              child: Text('No users added yet.'.tr),
-            );
+            return Center(child: Text('No users added yet.'.tr));
           }
           return ListView.separated(
             padding: const EdgeInsets.all(24),
@@ -51,11 +45,17 @@ class UserListView extends GetView<UserController> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
                   onTap: () async {
-                    await Get.toNamed(AppRoutes.userAssignments, arguments: user);
+                    await Get.toNamed(
+                      AppRoutes.userAssignments,
+                      arguments: user,
+                    );
                     controller.loadUsers();
                   },
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
                     leading: Container(
                       width: 46,
                       height: 46,
@@ -73,18 +73,24 @@ class UserListView extends GetView<UserController> {
                     title: Text(
                       user.fullName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     subtitle: Text('${user.role.label} • ${user.phone}'),
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'assign') {
-                          await Get.toNamed(AppRoutes.userAssignments, arguments: user);
+                          await Get.toNamed(
+                            AppRoutes.userAssignments,
+                            arguments: user,
+                          );
                           controller.loadUsers();
                         }
                         if (value == 'edit') {
-                          await Get.toNamed(AppRoutes.userForm, arguments: user);
+                          await Get.toNamed(
+                            AppRoutes.userForm,
+                            arguments: user,
+                          );
                           controller.loadUsers();
                         }
                         if (value == 'delete') {
@@ -92,9 +98,15 @@ class UserListView extends GetView<UserController> {
                         }
                       },
                       itemBuilder: (context) => [
-                        PopupMenuItem(value: 'assign', child: Text('Assign Access'.tr)),
+                        PopupMenuItem(
+                          value: 'assign',
+                          child: Text('Assign Access'.tr),
+                        ),
                         PopupMenuItem(value: 'edit', child: Text('Edit'.tr)),
-                        PopupMenuItem(value: 'delete', child: Text('Delete'.tr)),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete'.tr),
+                        ),
                       ],
                     ),
                   ),

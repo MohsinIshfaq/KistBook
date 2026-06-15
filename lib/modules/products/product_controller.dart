@@ -35,28 +35,13 @@ class ProductController extends GetxController {
   }
 
   List<ProductModel> get filteredProducts {
-    final normalizedCategories = selectedCategories
-        .map((item) => item.trim().toLowerCase())
-        .where((item) => item.isNotEmpty)
-        .toSet();
     final normalizedQuery = searchQuery.trim().toLowerCase();
 
+    if (normalizedQuery.isEmpty) {
+      return List<ProductModel>.from(products);
+    }
+
     return products.where((product) {
-      final productCategories = product.categories
-          .map((item) => item.trim().toLowerCase())
-          .where((item) => item.isNotEmpty)
-          .toSet();
-      final categoryMatches =
-          normalizedCategories.isEmpty ||
-          productCategories.any(normalizedCategories.contains);
-      if (!categoryMatches) {
-        return false;
-      }
-
-      if (normalizedQuery.isEmpty) {
-        return true;
-      }
-
       final haystack = [
         product.name,
         product.brandName,
@@ -98,6 +83,11 @@ class ProductController extends GetxController {
 
   void setSearchQuery(String value) {
     searchQuery = value;
+    update();
+  }
+
+  void clearSearch() {
+    searchQuery = '';
     update();
   }
 

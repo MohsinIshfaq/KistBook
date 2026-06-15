@@ -61,6 +61,7 @@ class _UserFormViewState extends State<UserFormView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Text((existing == null ? 'Add User' : 'Edit User').tr),
       ),
       body: GetBuilder<UserController>(

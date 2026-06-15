@@ -9,6 +9,7 @@ import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
+import 'core/widgets/app_bottom_navigation.dart';
 import 'data/database/db_helper.dart';
 import 'modules/settings/settings_controller.dart';
 import 'services/background_service.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   Get.put(sessionManager, permanent: true);
   final binding = InitialBinding();
   binding.dependencies();
+  Get.put(AppNavigationController(), permanent: true);
   await Get.find<DbHelper>().initialize();
   await sessionManager.loadAuthData();
   if (sessionManager.canRestoreSession) {
@@ -44,6 +46,11 @@ class KistBookApp extends StatelessWidget {
           fallbackLocale: const Locale('en', 'US'),
           supportedLocales: AppTranslations.locales,
           translations: AppTranslations(),
+          routingCallback: (routing) {
+            Get.find<AppNavigationController>().setCurrentRoute(
+              routing?.current,
+            );
+          },
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -53,26 +60,30 @@ class KistBookApp extends StatelessWidget {
           darkTheme: AppTheme.dark,
           themeMode: settings.themeMode,
           builder: (context, child) {
-            final brightness = Theme.of(context).brightness;
+            final theme = Theme.of(context);
+            final brightness = theme.brightness;
+            final systemNavigationBarColor = theme.scaffoldBackgroundColor;
             final overlayStyle = brightness == Brightness.dark
-                ? const SystemUiOverlayStyle(
+                ? SystemUiOverlayStyle(
                     statusBarColor: Colors.transparent,
                     statusBarIconBrightness: Brightness.light,
                     statusBarBrightness: Brightness.dark,
-                    systemNavigationBarColor: Color(0xFF0D1320),
+                    systemNavigationBarColor: systemNavigationBarColor,
                     systemNavigationBarIconBrightness: Brightness.light,
                   )
-                : const SystemUiOverlayStyle(
+                : SystemUiOverlayStyle(
                     statusBarColor: Colors.transparent,
                     statusBarIconBrightness: Brightness.dark,
                     statusBarBrightness: Brightness.light,
-                    systemNavigationBarColor: Color(0xFFF4F7FB),
+                    systemNavigationBarColor: systemNavigationBarColor,
                     systemNavigationBarIconBrightness: Brightness.dark,
                   );
 
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: overlayStyle,
-              child: child ?? const SizedBox.shrink(),
+              child: AppNavigationFrame(
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
           initialRoute: Get.find<SessionManager>().canRestoreSession

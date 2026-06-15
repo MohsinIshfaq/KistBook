@@ -18,4 +18,6 @@ abstract class AppRoutes {
   static const paymentForm = '/payments/form';
   static const reports = '/reports';
   static const settings = '/settings';
+  static const settingsLanguage = '/settings/language';
+  static const settingsAppearance = '/settings/appearance';
 }

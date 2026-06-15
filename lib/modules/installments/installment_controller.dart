@@ -36,6 +36,7 @@ class InstallmentController extends GetxController {
   List<ProductModel> products = [];
   Map<int, CustomerPaymentInsight> customerInsights = {};
   bool isLoading = false;
+  String searchQuery = '';
   StreamSubscription<SyncResource>? _syncSubscription;
 
   @override
@@ -117,6 +118,16 @@ class InstallmentController extends GetxController {
       return null;
     }
     return _installmentRepository.fetchPlanSummary(plan.id!);
+  }
+
+  void setSearchQuery(String value) {
+    searchQuery = value.trim();
+    update();
+  }
+
+  void clearSearch() {
+    searchQuery = '';
+    update();
   }
 
   void _requestSync() {

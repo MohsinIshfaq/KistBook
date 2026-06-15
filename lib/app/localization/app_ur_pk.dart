@@ -4,6 +4,14 @@ const Map<String, String> appUrPk = {
       'KistBook کی شکل اور ایپ کی زبان یہاں سے تبدیل کریں۔',
   'Appearance': 'ظاہری انداز',
   'Language': 'زبان',
+  'Preferences': 'ترجیحات',
+  'Full Access': 'مکمل رسائی',
+  'Limited Access': 'محدود رسائی',
+  'English language': 'انگریزی زبان',
+  'Urdu language': 'اردو زبان',
+  'Owner': 'اونر',
+  'Admin': 'ایڈمن',
+  'SalesMan': 'سیلز مین',
   'Choose the theme that feels best for your team.':
       'اپنی ٹیم کے لیے مناسب تھیم منتخب کریں۔',
   'Pick the language for the full application experience.':
@@ -17,6 +25,13 @@ const Map<String, String> appUrPk = {
   'Application theme': 'ایپلیکیشن تھیم',
   'App language': 'ایپ کی زبان',
   'Current selection': 'موجودہ انتخاب',
+  'Logout': 'لاگ آؤٹ',
+  'Log out': 'لاگ آؤٹ',
+  'Logging out...': 'لاگ آؤٹ ہو رہا ہے...',
+  'Signing out...': 'سائن آؤٹ ہو رہا ہے...',
+  'Logged Out': 'لاگ آؤٹ ہوگیا',
+  'Are you sure you want to log out of your account?':
+      'کیا آپ واقعی اپنے اکاؤنٹ سے لاگ آؤٹ کرنا چاہتے ہیں؟',
   'Welcome Back': 'دوبارہ خوش آمدید',
   'Sign in with your phone number and password to continue to KistBook.':
       'KistBook جاری رکھنے کے لیے فون نمبر اور پاس ورڈ سے لاگ اِن کریں۔',
@@ -58,9 +73,11 @@ const Map<String, String> appUrPk = {
   'Owner account already exists. Please login or ask the owner to add users.':
       'اونر اکاؤنٹ پہلے سے موجود ہے۔ براہ کرم لاگ اِن کریں یا اونر سے صارف شامل کرنے کو کہیں۔',
   'Dashboard': 'ڈیش بورڈ',
+  'Menu': 'مینو',
   'Customers': 'کسٹمرز',
   'Products': 'پروڈکٹس',
   'Installments': 'اقساط',
+  'Installment Plan': 'قسطی پلان',
   'Daily Collection': 'یومیہ وصولی',
   'Payments': 'ادائیگیاں',
   'Reports': 'رپورٹس',
@@ -288,6 +305,18 @@ const Map<String, String> appUrPk = {
   'Date: @date': 'تاریخ: @date',
   'No installments are due today.': 'آج کوئی قسط واجب الادا نہیں۔',
   'Customer': 'کسٹمر',
+  'Search by card number or customer name':
+      'کارڈ نمبر یا کسٹمر نام سے تلاش کریں',
+  'No customers found': 'کوئی کسٹمر نہیں ملا',
+  'Try another card number or customer name.':
+      'کوئی اور کارڈ نمبر یا کسٹمر نام تلاش کریں۔',
   'Item': 'آئٹم',
   'Payable': 'قابل ادا',
+  'Search by name, brand or SKU': 'نام، برانڈ یا SKU سے تلاش کریں',
+  'No products found': 'کوئی پروڈکٹ نہیں ملی',
+  'Try another product search term.': 'کوئی اور پروڈکٹ تلاش کریں۔',
+  'Search by customer, product or plan': 'کسٹمر، پروڈکٹ یا پلان سے تلاش کریں',
+  'No installment plans found': 'کوئی قسطی پلان نہیں ملا',
+  'Try another customer, product or plan search.':
+      'کوئی اور کسٹمر، پروڈکٹ یا پلان تلاش کریں۔',
 };
