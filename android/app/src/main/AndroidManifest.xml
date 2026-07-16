@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required by every build type that communicates with the backend. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="kistbook"
         android:name="${applicationName}"
