@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -130,197 +131,199 @@ class DashboardView extends GetView<DashboardController> {
                 ),
               ),
               const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  MetricCard(
-                    label: 'Customers'.tr,
-                    value: '${snapshot.customers.length}',
-                    accent: AppColors.info,
-                    caption: 'Registered profiles'.tr,
-                  ),
-                  MetricCard(
-                    label: 'Pending Today'.tr,
-                    value: '${snapshot.dueToday.length}',
-                    accent: AppColors.warning,
-                    caption: 'Installments due today'.tr,
-                  ),
-                  MetricCard(
-                    label: 'Overdue'.tr,
-                    value: '${snapshot.overdue.length}',
-                    accent: AppColors.danger,
-                    caption: 'Missed or delayed entries'.tr,
-                  ),
-                  MetricCard(
-                    label: 'Collected'.tr,
-                    value: snapshot.totalCollectedLabel,
-                    accent: AppColors.success,
-                    caption:
-                        (isOwner
-                                ? 'Tracked receipts only'
-                                : 'Your tracked receipts')
-                            .tr,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Today Alerts'.tr,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+              if (kDebugMode) ...[
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    MetricCard(
+                      label: 'Customers'.tr,
+                      value: '${snapshot.customers.length}',
+                      accent: AppColors.info,
+                      caption: 'Registered profiles'.tr,
+                    ),
+                    MetricCard(
+                      label: 'Pending Today'.tr,
+                      value: '${snapshot.dueToday.length}',
+                      accent: AppColors.warning,
+                      caption: 'Installments due today'.tr,
+                    ),
+                    MetricCard(
+                      label: 'Overdue'.tr,
+                      value: '${snapshot.overdue.length}',
+                      accent: AppColors.danger,
+                      caption: 'Missed or delayed entries'.tr,
+                    ),
+                    MetricCard(
+                      label: 'Collected'.tr,
+                      value: snapshot.totalCollectedLabel,
+                      accent: AppColors.success,
+                      caption:
+                      (isOwner
+                          ? 'Tracked receipts only'
+                          : 'Your tracked receipts')
+                          .tr,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Today Alerts'.tr,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : AppColors.surfaceTint,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '@count active'.trParams({
+                                  'count': '${snapshot.dueToday.length}',
+                                }),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : AppColors.surfaceTint,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '@count active'.trParams({
-                                'count': '${snapshot.dueToday.length}',
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (snapshot.dueToday.isEmpty)
-                        Text('No installments due today.'.tr)
-                      else
-                        ...snapshot.dueToday.map(
-                          (detail) => Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.04)
-                                  : AppColors.surfaceMuted,
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.warning.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: const Icon(
-                                    Icons.schedule_outlined,
-                                    color: AppColors.warning,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        detail.customer.name,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (snapshot.dueToday.isEmpty)
+                          Text('No installments due today.'.tr)
+                        else
+                          ...snapshot.dueToday.map(
+                                (detail) => Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.04)
+                                    : AppColors.surfaceMuted,
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warning.withValues(
+                                        alpha: 0.15,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        detail.product?.name ??
-                                            detail.plan.itemName,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      Icons.schedule_outlined,
+                                      color: AppColors.warning,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          detail.customer.name,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          detail.product?.name ??
+                                              detail.plan.itemName,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      StatusBadge(
+                                        status: InstallmentVisualStatus.pending,
                                       ),
                                     ],
                                   ),
-                                ),
-                                const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    StatusBadge(
-                                      status: InstallmentVisualStatus.pending,
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    onPressed: () => Get.toNamed(
+                                      AppRoutes.paymentForm,
+                                      arguments: detail,
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () => Get.toNamed(
-                                    AppRoutes.paymentForm,
-                                    arguments: detail,
+                                    icon: const Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                    ),
                                   ),
-                                  icon: const Icon(
-                                    Icons.arrow_forward_ios_rounded,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Daily PDF Report'.tr,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                ],
                               ),
                             ),
                           ),
-                          FilledButton.icon(
-                            onPressed: () async {
-                              await logic.generateTodayReport();
-                              if (logic.reportPath != null) {
-                                showBannerAlert(
-                                  title: 'Report Generated'.tr,
-                                  messages: [logic.reportPath!],
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.picture_as_pdf),
-                            label: const Text('Generate'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        logic.reportPath == null
-                            ? 'A PDF of today\'s due installments can be generated from here.'
-                            : 'Latest file: ${logic.reportPath}',
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Daily PDF Report'.tr,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            FilledButton.icon(
+                              onPressed: () async {
+                                await logic.generateTodayReport();
+                                if (logic.reportPath != null) {
+                                  showBannerAlert(
+                                    title: 'Report Generated'.tr,
+                                    messages: [logic.reportPath!],
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.picture_as_pdf),
+                              label: const Text('Generate'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          logic.reportPath == null
+                              ? 'A PDF of today\'s due installments can be generated from here.'
+                              : 'Latest file: ${logic.reportPath}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           );
         },
