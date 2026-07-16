@@ -5,7 +5,7 @@ class API {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.18.121:8000',
+    defaultValue: 'https://demo4.app-technologies.com',
   );
   static const String prefix = '/api/';
   static const String postfix = '';

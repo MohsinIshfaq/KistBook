@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -88,47 +89,49 @@ class _LoginViewState extends State<LoginView> {
                   setState(() => obscurePassword = !obscurePassword);
                 },
               ),
-              const SizedBox(height: 2),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: Checkbox(
-                      value: rememberMe,
-                      activeColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
+              if (kDebugMode) ...[
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: Checkbox(
+                        value: rememberMe,
+                        activeColor: theme.colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        onChanged: (value) {
+                          setState(() => rememberMe = value ?? true);
+                        },
                       ),
-                      onChanged: (value) {
-                        setState(() => rememberMe = value ?? true);
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Remember me'.tr,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : AppColors.inkSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        showBannerAlert(
+                          type: BannerStyle.warning,
+                          title: 'Forgot Password?'.tr,
+                          messages: [
+                            'Please contact the owner to reset your password.'.tr,
+                          ],
+                        );
                       },
+                      child: Text('Forgot Password?'.tr),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Remember me'.tr,
-                      style: TextStyle(
-                        color: isDark ? Colors.white70 : AppColors.inkSoft,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      showBannerAlert(
-                        type: BannerStyle.warning,
-                        title: 'Forgot Password?'.tr,
-                        messages: [
-                          'Please contact the owner to reset your password.'.tr,
-                        ],
-                      );
-                    },
-                    child: Text('Forgot Password?'.tr),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 28),
               AuthPrimaryButton(
                 label: 'Login'.tr,
@@ -137,38 +140,40 @@ class _LoginViewState extends State<LoginView> {
                 onPressed: _submitLogin,
               ),
               const SizedBox(height: 30),
-              _DividerLabel(label: 'or'.tr),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: logic.isSubmitting
-                      ? null
-                      : () => Get.toNamed(AppRoutes.ownerSignup),
-                  icon: Icon(
-                    Icons.person_add_alt_1_rounded,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    child: Text(
-                      'Create Owner Account'.tr,
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w800,
+              if (kDebugMode) ...[
+                _DividerLabel(label: 'or'.tr),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: logic.isSubmitting
+                        ? null
+                        : () => Get.toNamed(AppRoutes.ownerSignup),
+                    icon: Icon(
+                      Icons.person_add_alt_1_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      child: Text(
+                        'Create Owner Account'.tr,
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: theme.colorScheme.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: theme.colorScheme.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                 ),
-              ),
-              const SizedBox(height: 44),
-              const AuthLegalCopy(),
+                const SizedBox(height: 44),
+                const AuthLegalCopy(),
+              ],
             ],
           );
         },
